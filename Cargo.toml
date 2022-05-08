@@ -1,0 +1,16 @@
+[package]
+name = "sconectl"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+keywords = ["SCONE", "confidential computing"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+repository = "https://github.com/scontain/sconectl"
+homepage = "https://sconedocs.github.io/"
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+colored = "*"
