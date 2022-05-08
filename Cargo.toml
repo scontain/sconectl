@@ -14,4 +14,4 @@ description = "sconectl helps to transform cloud-native applications into cloud-
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-colored = "*"
+colored = "2.0.0"
