@@ -36,7 +36,7 @@ OPTIONS:
         eprintln!("ERROR: {}", msg.red());
     }
 
-    process::exit(0x0100);
+    process::exit(0x0101);
 }
 
 /// do some sanity checking
@@ -87,7 +87,7 @@ fn main() {
     sanity();
     let args: Vec<String> = env::args().collect();
     let mut cmd = Command::new("sh");
-    let mut s = r#"docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v "$HOME/.docker:/root/.docker" -v "$HOME/.cas:/root/.cas" -v "$HOME/.scone:/root/.scone" -v "$PWD:/root" -w "/root" --pull registry.scontain.com:5050/cicd/sconecli:latest"#.to_string();
+    let mut s = r#"docker run -t --rm -v "/var/run/docker.sock":"/var/run/docker.sock" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" registry.scontain.com:5050/cicd/sconecli:latest"#.to_string();
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
@@ -97,7 +97,11 @@ fn main() {
     if args.len() <= 1 {
         help("You need to specify a COMMAND.")
     }
-    cmd.args(["-c", &s])
+    let status =    cmd.args(["-c", &s])
         .status()
         .expect("failed to execute {s}.");
+    if !status.success() {
+        eprintln!("cmd={s}:\n result={:?}", status);
+        process::exit(0x0101);
+    }
 }
