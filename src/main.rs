@@ -9,6 +9,8 @@ use which::which;
 /// prints a help message. If `msg` is not empty, prints also the message in red.
 
 fn help(msg: &str) -> ! {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+
     eprintln!(
         r#"sconectl [COMMAND] [OPTIONS]
 sconectl helps to transform cloud-native applications into cloud-confidential applications. It
@@ -31,7 +33,9 @@ OPTIONS:
   --help
           Print help information. Other OPTIONS depend on the type of MANIFEST. 
           You need to specify -m <MANIFEST> for help to print more options.     
-"#
+
+
+VERSION: sconectl {VERSION}"#
     );
     if msg != "" {
         eprintln!("ERROR: {}", msg.red());
@@ -59,7 +63,7 @@ fn sanity() -> String {
     };
     let path = format!("{home}/.docker");
     if !Path::new(&path).exists() {
-        help(&format!("$HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first."));
+        eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually.");
     }
     let path = format!("{home}/.cas");
     if !Path::new(&path).exists() {
@@ -76,7 +80,7 @@ fn sanity() -> String {
         }
     }
     let vol = match env::var("DOCKER_HOST") {
-        Ok(val) => { let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();  format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}" --userns keep-id"#) },
+        Ok(val) => { let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string(); format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#) },
         Err(_e) => format!("-v /var/run/docker.sock:/var/run/docker.sock"),
     };
     vol
@@ -86,7 +90,8 @@ fn sanity() -> String {
 /// It supports to transform native services into confidential services and services meshes
 /// into confidential service meshes.
 
-/// --userns=keep-id
+/// --userns=keep-id works only in rootless - fails when running as root
+
 fn main() {
     let vol = sanity();
     let args: Vec<String> = env::args().collect();
@@ -109,3 +114,4 @@ fn main() {
         process::exit(0x0101);
     }
 }
+
