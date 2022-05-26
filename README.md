@@ -57,6 +57,12 @@ OPTIONS:
           You need to specify -m <MANIFEST> for help to print more options.     
 ```
 
+## Podman support
+
+Our focus is to support `podman` instead of `docker` (legacy). To ensure that we can run both with `docker` as well as `podman`, we use the Docker API for now. After starting `podman`, please set the environment variable `DOCKER_HOST` as instructed by `podman`.
+
+`sconectl` will use `DOCKER_HOST` as the socket. If not set, it will use the default docker socket for now, i.e., `/var/run/docker.sock`.
+
 ## Alternative: shell `alias`
 
 In case you want to run `sconectl` from your development machine but you do not want to install this crate, you can use this `alias` instead:

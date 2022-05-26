@@ -19,7 +19,8 @@ sconectl itself is a CLI that runs on your development machine and executes `sco
 container: [`scone`](https://sconedocs.github.io/) is a platform to convert native applications 
 into confidential applications. For now, sconectl uses docker to run the commands. 
 
-
+By default, sconectl uses the docker engine. If you want to use podman instead, please set 
+environment variable DOCKER_HOST to your podman API (printed by podman during startup).
 
 COMMAND:
   apply   apply manifest. Execute `sconectl apply --help` for more info.
@@ -27,7 +28,7 @@ COMMAND:
 
 OPTIONS:
     
-  -h, --help
+  --help
           Print help information. Other OPTIONS depend on the type of MANIFEST. 
           You need to specify -m <MANIFEST> for help to print more options.     
 "#
@@ -44,16 +45,13 @@ OPTIONS:
 /// - check that all required directories exist
 /// - check that docker socket exists
 
-fn sanity() {
+fn sanity() -> String {
     // do some sanity checking first
     if let Err(_e) = which("sh") {
         help("Shell `sh` not installed. Please install!")
     }
     if let Err(_e) = which("docker") {
-        help("Docker (i.e. `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/")
-    }
-    if !Path::new("/var/run/docker.sock").exists() {
-        help("Docker engine does not seem to be installed since '/var/run/docker.sock' does not exit). Please install the docker engine.")
+        help("Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/")
     }
     let home = match env::var("HOME") {
         Ok(val) => val,
@@ -77,17 +75,23 @@ fn sanity() {
             help(&format!("Error creating local directory {path}: {:?}!", e));
         }
     }
+    let vol = match env::var("DOCKER_HOST") {
+        Ok(val) => { let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();  format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}" --userns keep-id"#) },
+        Err(_e) => format!("-v /var/run/docker.sock:/var/run/docker.sock"),
+    };
+    vol
 }
 
 /// sconectl helps to transform cloud-native applications into cloud-confidential applications.
 /// It supports to transform native services into confidential services and services meshes
 /// into confidential service meshes.
 
+/// --userns=keep-id
 fn main() {
-    sanity();
+    let vol = sanity();
     let args: Vec<String> = env::args().collect();
     let mut cmd = Command::new("sh");
-    let mut s = r#"docker run -t --rm -v "/var/run/docker.sock":"/var/run/docker.sock" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" registry.scontain.com:5050/cicd/sconecli:latest"#.to_string();
+    let mut s = format!(r#"docker run -t --rm {vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" registry.scontain.com:5050/cicd/sconecli:latest"#);
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
