@@ -63,6 +63,14 @@ Our focus is to support `podman` instead of `docker` (legacy). To ensure that we
 
 `sconectl` will use `DOCKER_HOST` as the socket. If not set, it will use the default docker socket for now, i.e., `/var/run/docker.sock`.
 
+## Publish new versoin
+
+To publish a new `sconectl` version, ensure that all your changes are committed and pushed. Then executed:
+
+```bash
+cargo publish
+```
+
 ## Alternative: shell `alias`
 
 In case you want to run `sconectl` from your development machine but you do not want to install this crate, you can use this `alias` instead:

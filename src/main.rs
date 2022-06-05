@@ -96,7 +96,7 @@ fn main() {
     let vol = sanity();
     let args: Vec<String> = env::args().collect();
     let mut cmd = Command::new("sh");
-    let mut s = format!(r#"docker run -t --rm {vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" registry.scontain.com:5050/cicd/sconecli:latest"#);
+    let mut s = format!(r#"docker run -t --rm {vol} --pull=always -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" registry.scontain.com:5050/cicd/sconecli:latest"#);
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
