@@ -5,6 +5,9 @@ use std::path::Path;
 use std::process;
 use std::process::Command;
 use which::which;
+use serde_json;
+use shells::*;
+
 
 /// prints a help message. If `msg` is not empty, prints also the message in red.
 
@@ -63,7 +66,23 @@ fn sanity() -> String {
     };
     let path = format!("{home}/.docker");
     if !Path::new(&path).exists() {
-        eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually.");
+        eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman.");
+    } else {
+        let path = format!("{home}/.docker/config.json");
+        match fs::read_to_string(path) {
+            Ok(config_content) => {
+                match serde_json::from_str::<serde_json::value::Value>(&config_content) {
+                    Err(_e) => { eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty."); serde_json::from_str("{}").expect("No Error!") },
+                    Ok(val)  => {
+                        match val["credsStore"].as_str() {
+                            None => {}, // ok
+                            Some(value) => { if value != "" { eprintln!("{}", r#"ERROR: command execution will most likely fail. Please set field 'credsStore'" in file '~/.docker/config.json' to "")"#.red()) } },
+                        }
+                    },
+                }
+            },
+            Err(_err) => eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty."),
+        }
     }
     let path = format!("{home}/.cas");
     if !Path::new(&path).exists() {
@@ -93,10 +112,17 @@ fn sanity() -> String {
 /// --userns=keep-id works only in rootless - fails when running as root
 
 fn main() {
+    let image = "registry.scontain.com:5050/cicd/sconecli:latest";
     let vol = sanity();
     let args: Vec<String> = env::args().collect();
-    let mut cmd = Command::new("sh");
-    let mut s = format!(r#"docker run -t --rm {vol} --pull=always -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" registry.scontain.com:5050/cicd/sconecli:latest"#);
+
+    // always pull CLI
+    let (code, _stdout, _stderr) = sh!("docker pull {image}");
+    if code != 0 {
+        eprintln!(r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access."#, "Failed to".red());
+    }
+
+    let mut s = format!(r#"docker run -t --rm {vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
@@ -106,11 +132,12 @@ fn main() {
     if args.len() <= 1 {
         help("You need to specify a COMMAND.")
     }
+    let mut cmd = Command::new("sh");
     let status =    cmd.args(["-c", &s])
         .status()
         .expect("failed to execute {s}.");
     if !status.success() {
-        eprintln!("cmd={s}:\n result={:?}", status);
+        eprintln!("{} See messages above. Command {} returned result={:?}", "Execution failed!".red(), args[1].blue(), status);
         process::exit(0x0101);
     }
 }

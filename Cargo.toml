@@ -1,6 +1,6 @@
 [package]
 name = "sconectl"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 keywords = ["SCONE", "confidential"]
@@ -16,3 +16,5 @@ maintenance = { status = "actively-developed" }
 [dependencies]
 colored = "2.0.0"
 which = "4.2.5"
+serde_json = "1.0.81"
+shells = "0.2.0"
