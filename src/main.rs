@@ -105,6 +105,28 @@ fn sanity() -> String {
     vol
 }
 
+
+fn get_kube_config_volume() -> String {
+    let kubeconfig_path = match env::var("KUBECONFIG") {
+        Ok(kubeconfig_path) =>  kubeconfig_path,
+        // if KUBECONFIG is not set, let us try the default path
+        Err(_err) => {
+            let home = match env::var("HOME") {
+                Ok(val) => val,
+                Err(_e) => help("environment variable HOME not defined."),
+            };
+            let path = format!("{home}/.kube/config");
+            if Path::new(&path).exists() {
+                path
+            } else {
+                "".to_owned()
+            }
+        },
+    };
+    return format!("-v {kubeconfig_path}:/root/.kube/config") // kubeconfig_path
+}
+
+
 /// sconectl helps to transform cloud-native applications into cloud-confidential applications.
 /// It supports to transform native services into confidential services and services meshes
 /// into confidential service meshes.
@@ -114,6 +136,7 @@ fn sanity() -> String {
 fn main() {
     let image = "registry.scontain.com:5050/cicd/sconecli:latest";
     let vol = sanity();
+    let kubeconfig_vol = get_kube_config_volume();
     let args: Vec<String> = env::args().collect();
 
     // always pull CLI
@@ -122,7 +145,7 @@ fn main() {
         eprintln!(r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access."#, "Failed to".red());
     }
 
-    let mut s = format!(r#"docker run -t --rm {vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
+    let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
