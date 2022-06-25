@@ -60,6 +60,14 @@ fn sanity() -> String {
     if let Err(_e) = which("docker") {
         help("Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/")
     }
+    
+    let socket_path = if cfg!(target_os = "windows") {
+        "//var/run/docker.sock".to_string()
+    } else if cfg!(target_os = "unix") {
+        "/var/run/docker.sock".to_string()
+    } else {
+        help("Docker engine does not seem to be installed since '/var/run/docker.sock'/'//var/run/docker.sock' does not exit). Please install the docker engine.")
+    };
     let home = match env::var("HOME") {
         Ok(val) => val,
         Err(_e) => help("environment variable HOME not defined."),
@@ -100,7 +108,7 @@ fn sanity() -> String {
     }
     let vol = match env::var("DOCKER_HOST") {
         Ok(val) => { let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string(); format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#) },
-        Err(_e) => format!("-v /var/run/docker.sock:/var/run/docker.sock"),
+        Err(_e) => format!("-v {socket_path}:/var/run/docker.sock"),
     };
     vol
 }
@@ -115,15 +123,10 @@ fn get_kube_config_volume() -> String {
                 Ok(val) => val,
                 Err(_e) => help("environment variable HOME not defined."),
             };
-            let path = format!("{home}/.kube/config");
-            if Path::new(&path).exists() {
-                path
-            } else {
-                "".to_owned()
-            }
+            format!("$HOME/.kube/config")
         },
     };
-    return format!("-v {kubeconfig_path}:/root/.kube/config") // kubeconfig_path
+    return format!(r#"-v "{kubeconfig_path}:/root/.kube/config""#) // kubeconfig_path
 }
 
 
@@ -145,7 +148,8 @@ fn main() {
         eprintln!(r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access."#, "Failed to".red());
     }
 
-    let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
+    let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" --pull always {image}"#);
+    println!("cmd={s}");
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
@@ -155,7 +159,7 @@ fn main() {
     if args.len() <= 1 {
         help("You need to specify a COMMAND.")
     }
-    let mut cmd = Command::new("sh");
+    let mut cmd = Command::new("bash");
     let status =    cmd.args(["-c", &s])
         .status()
         .expect("failed to execute {s}.");
