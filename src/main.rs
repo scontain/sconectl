@@ -56,6 +56,8 @@ VERSION: sconectl {VERSION}"#
 /// - check that all commands exists
 /// - check that all required directories exist
 /// - check that docker socket exists
+/// Note: https://github.com/scontain/scone_mesh_tutorial/blob/main/check_prerequisites.sh does some more sanity checking
+///       Run the check_prerequisites.sh to check more dependencies
 
 fn sanity() -> String {
     // do some sanity checking first
@@ -144,7 +146,8 @@ fn main() {
         if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
             eprintln!("A fatal error occurred: {s:?} (Error 23882-16605-12717)");
         } else {
-            eprintln!("A fatal error occurred: {}. (Error 30339-23400-21867)", format!("{panic_info}").red());
+            let err_msg = format!("{panic_info}");
+            eprintln!("A fatal error occurred: {}. (Error 30339-23400-21867)", err_msg.trim_start_matches("panicked at ").red());
         }
         process::exit(1);
     }));
