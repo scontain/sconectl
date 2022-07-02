@@ -7,7 +7,7 @@ use std::process::Command;
 use which::which;
 use serde_json;
 use shells::*;
-
+use std::panic;
 
 /// prints a help message. If `msg` is not empty, prints also the message in red.
 
@@ -26,6 +26,11 @@ into confidential applications. For now, sconectl uses docker to run the command
 
 By default, sconectl uses the docker engine. If you want to use podman instead, please set 
 environment variable DOCKER_HOST to your podman API (printed by podman during startup).
+
+sconectl runs on MacOs and Linux and if there is some demand, on Windows. Try out
+   https://github.com/scontain/scone_mesh_tutorial 
+to test your sconectl setup. In particular, it will test that all prerequisites are satisfied
+and gives some examples on how to use sconectl.
 
 COMMAND:
   apply   apply manifest. Execute `sconectl apply --help` for more info.
@@ -55,47 +60,47 @@ VERSION: sconectl {VERSION}"#
 fn sanity() -> String {
     // do some sanity checking first
     if let Err(_e) = which("sh") {
-        help("Shell `sh` not installed. Please install!")
+        help("Shell `sh` not installed. Please install! (Error 4497-4397-12312)")
     }
     if let Err(_e) = which("docker") {
-        help("Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/")
+        help("Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/ (Error 21214-27681-19217)")
     }
     let home = match env::var("HOME") {
         Ok(val) => val,
-        Err(_e) => help("environment variable HOME not defined."),
+        Err(_e) => help("environment variable HOME not defined. (Error 25873-23261-18708)"),
     };
     let path = format!("{home}/.docker");
     if !Path::new(&path).exists() {
-        eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman.");
+        eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman. (Warning 22414-7450-14297)");
     } else {
         let path = format!("{home}/.docker/config.json");
         match fs::read_to_string(path) {
             Ok(config_content) => {
                 match serde_json::from_str::<serde_json::value::Value>(&config_content) {
-                    Err(_e) => { eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty."); serde_json::from_str("{}").expect("No Error!") },
+                    Err(_e) => { eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 8870-21168-30218)"); serde_json::from_str("{}").expect("Docker config file seems to be garbled (Error 15572-27738-16119)") },
                     Ok(val)  => {
                         match val["credsStore"].as_str() {
                             None => {}, // ok
-                            Some(value) => { if value != "" { eprintln!("{}", r#"ERROR: command execution will most likely fail. Please set field 'credsStore'" in file '~/.docker/config.json' to "")"#.red()) } },
+                            Some(value) => { if value != "" { eprintln!("{}", r#"ERROR: command execution will most likely fail. Please set field 'credsStore'" in file '~/.docker/config.json' to "" (Error 8352-13006-22294)"#.red()) } },
                         }
                     },
                 }
             },
-            Err(_err) => eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty."),
+            Err(_err) => eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 22852-10923-23603)"),
         }
     }
     let path = format!("{home}/.cas");
     if !Path::new(&path).exists() {
         // create this path
         if let Err(e) = fs::create_dir(&path) {
-            help(&format!("Error creating local directory {path}: {:?}!", e));
+            help(&format!("Error creating local directory {path}: {:?}! (Error 32113-24496-13076)", e));
         }
     }
     let path = format!("{home}/.scone");
     if !Path::new(&path).exists() {
         // create this path
         if let Err(e) = fs::create_dir(&path) {
-            help(&format!("Error creating local directory {path}: {:?}!", e));
+            help(&format!("Error creating local directory {path}: {:?}! (Error 29613-7923-17838)", e));
         }
     }
     let vol = match env::var("DOCKER_HOST") {
@@ -113,7 +118,7 @@ fn get_kube_config_volume() -> String {
         Err(_err) => {
             let home = match env::var("HOME") {
                 Ok(val) => val,
-                Err(_e) => help("environment variable HOME not defined."),
+                Err(_e) => help("environment variable HOME not defined. (Error 12874-23995-6201)"),
             };
             let path = format!("{home}/.kube/config");
             if Path::new(&path).exists() {
@@ -134,6 +139,16 @@ fn get_kube_config_volume() -> String {
 /// --userns=keep-id works only in rootless - fails when running as root
 
 fn main() {
+
+    panic::set_hook(Box::new(|panic_info| {
+        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            eprintln!("A fatal error occurred: {s:?} (Error 23882-16605-12717)");
+        } else {
+            eprintln!("A fatal error occurred: {}. (Error 30339-23400-21867)", format!("{panic_info}").red());
+        }
+        process::exit(1);
+    }));
+    
     let image = "registry.scontain.com:5050/cicd/sconecli:latest";
     let vol = sanity();
     let kubeconfig_vol = get_kube_config_volume();
@@ -142,7 +157,7 @@ fn main() {
     // always pull CLI
     let (code, _stdout, _stderr) = sh!("docker pull {image}");
     if code != 0 {
-        eprintln!(r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access."#, "Failed to".red());
+        eprintln!(r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)"#, "Failed to".red());
     }
 
     let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
@@ -153,14 +168,14 @@ fn main() {
         s.push_str(&format!(r#" "{}""#, args[i]));
     }
     if args.len() <= 1 {
-        help("You need to specify a COMMAND.")
+        help("You need to specify a COMMAND. (Error 696-7363-5766)")
     }
     let mut cmd = Command::new("sh");
     let status =    cmd.args(["-c", &s])
         .status()
-        .expect("failed to execute {s}.");
+        .expect("failed to execute {s}. (Error 8914-6233-13917)");
     if !status.success() {
-        eprintln!("{} See messages above. Command {} returned result={:?}", "Execution failed!".red(), args[1].blue(), status);
+        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[1].blue(), status);
         process::exit(0x0101);
     }
 }
