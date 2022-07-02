@@ -144,7 +144,8 @@ fn main() {
 
     panic::set_hook(Box::new(|panic_info| {
         if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-            eprintln!("A fatal error occurred: {s:?} (Error 23882-16605-12717)");
+            let err_msg = format!("{s:?}").red();
+            eprintln!("A fatal error occurred: {err_msg} (Error 23882-16605-12717)");
         } else {
             let err_msg = format!("{panic_info}");
             eprintln!("A fatal error occurred: {}. (Error 30339-23400-21867)", err_msg.trim_start_matches("panicked at ").red());
@@ -176,7 +177,7 @@ fn main() {
     let mut cmd = Command::new("sh");
     let status =    cmd.args(["-c", &s])
         .status()
-        .expect("failed to execute {s}. (Error 8914-6233-13917)");
+        .expect("failed to execute '{s}'. (Error 8914-6233-13917)");
     if !status.success() {
         eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[1].blue(), status);
         process::exit(0x0101);
