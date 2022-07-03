@@ -158,12 +158,17 @@ fn main() {
     let kubeconfig_vol = get_kube_config_volume();
     let args: Vec<String> = env::args().collect();
 
-    // always pull CLI
-    let (code, _stdout, _stderr) = sh!("docker pull {image}");
-    if code != 0 {
-        eprintln!(r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)"#, "Failed to".red());
-    }
 
+    // pull image unless SCONECTL_NOPULL is set
+    match env::var("SCONECTL_NOPULL") {
+        Ok(_ignore) =>  println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
+        Err(_err) => {    
+            let (code, _stdout, _stderr) = sh!("docker pull {image}");
+            if code != 0 {
+                eprintln!(r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)"#, "Failed to".red());
+            }
+        },
+    }
     let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
