@@ -24,11 +24,13 @@ sconectl itself is a CLI that runs on your development machine and executes `sco
 container: [`scone`](https://sconedocs.github.io/) is a platform to convert native applications 
 into confidential applications. For now, sconectl uses docker to run the commands. 
 
-By default, sconectl uses the docker engine. If you want to use podman instead, please set 
-environment variable DOCKER_HOST to your podman API (printed by podman during startup).
+If you want to use podman instead, please set  environment variable DOCKER_HOST to your podman API 
+(printed by podman during startup). Currently, podman has still some open issues that need to be solved.
 
 sconectl runs on MacOs and Linux and if there is some demand, on Windows. Try out
+
    https://github.com/scontain/scone_mesh_tutorial 
+
 to test your sconectl setup. In particular, it will test that all prerequisites are satisfied
 and gives some examples on how to use sconectl.
 
@@ -42,14 +44,24 @@ OPTIONS:
           Print help information. Other OPTIONS depend on the type of MANIFEST. 
           You need to specify -m <MANIFEST> for help to print more options.     
 
+ENVIRONMENT:
+
+  SCONECTL_REPO
+           Set this to the OCI image repo that you are using. The default repo
+           is 'registry.scontain.com:5050'
+
+
+  SCONECTL_NOPULL
+           By default, sconectl pulls the CLI image 'cicd/sconecli:latest' first. If this environment 
+           variable is defined, sconectl does not pull the image. 
 
 VERSION: sconectl {VERSION}"#
     );
     if msg != "" {
         eprintln!("ERROR: {}", msg.red());
+        process::exit(0x0101);
     }
-
-    process::exit(0x0101);
+    process::exit(0);
 }
 
 /// do some sanity checking
@@ -153,11 +165,15 @@ fn main() {
         process::exit(1);
     }));
     
-    let image = "registry.scontain.com:5050/cicd/sconecli:latest";
     let vol = sanity();
     let kubeconfig_vol = get_kube_config_volume();
     let args: Vec<String> = env::args().collect();
 
+    let repo = match env::var("SCONECTL_REPO") {
+        Ok(repo) =>  repo,
+        Err(_err) =>  format!("registry.scontain.com:5050")
+    };
+    let image = format!("{repo}/cicd/sconecli:latest");
 
     // pull image unless SCONECTL_NOPULL is set
     match env::var("SCONECTL_NOPULL") {
@@ -169,7 +185,7 @@ fn main() {
             }
         },
     }
-    let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
+    let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
