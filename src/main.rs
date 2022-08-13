@@ -8,41 +8,41 @@ use which::which;
 use serde_json;
 use shells::*;
 use std::panic;
+use spinners::{Spinner, Spinners};
+
 
 /// prints a help message. If `msg` is not empty, prints also the message in red.
 
 fn help(msg: &str) -> ! {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-    eprintln!(
-        r#"sconectl [COMMAND] [OPTIONS]
-sconectl helps to transform cloud-native applications into cloud-confidential applications. It
-supports to transform native services into confidential services and services meshes into 
-confidential service meshes. 
+    eprintln!("{}{VERSION}", termimad::inline(
+r#"# `sconectl` [COMMAND] [OPTIONS]
 
-sconectl itself is a CLI that runs on your development machine and executes `scone` commands in a local
-container: [`scone`](https://sconedocs.github.io/) is a platform to convert native applications 
-into confidential applications. For now, sconectl uses docker to run the commands. 
+`sconectl` helps to transform cloud-native applications into cloud-confidential applications. It supports converting native services into confidential services and services meshes into confidential service meshes. 
 
-If you want to use podman instead, please set  environment variable DOCKER_HOST to your podman API 
-(printed by podman during startup). Currently, podman has still some open issues that need to be solved.
+`sconectl` is a CLI that runs on your development machine and executes `scone` commands in a local container: [`scone`](https://sconedocs.github.io/) is a platform to convert native applications into confidential applications. `sconectl` uses docker or podman to run the commands. 
 
-sconectl runs on MacOs and Linux and if there is some demand, on Windows. Try out
+Ensure all files you want to pass along are in the current working directory or subdirectories. This is needed since we pass the current working directory to the docker image that executes the command.
+
+If you want to use podman instead, please set the environment variable DOCKER_HOST to your podman API (printed by podman during startup). Currently, podman still has some open issues that need to be solved.
+
+`sconectl` runs on macOS and Linux, and if there is some demand, on Windows. Try out
 
    https://github.com/scontain/scone_mesh_tutorial 
 
-to test your sconectl setup. In particular, it will test that all prerequisites are satisfied
-and gives some examples on how to use sconectl.
+to test your `sconectl` setup. In particular, it will test that all prerequisites are satisfied
+and gives some examples on how to use `sconectl`.
 
 COMMAND:
-  apply   apply manifest. Execute `sconectl apply --help` for more info.
+  `apply`   apply manifest. Execute `sconectl apply --help` for more info.
 
 
 OPTIONS:
     
   --help
           Print help information. Other OPTIONS depend on the type of MANIFEST. 
-          You need to specify -m <MANIFEST> for help to print more options.     
+          You need to specify -m <MANIFEST> to print more specific help messages.     
 
 ENVIRONMENT:
 
@@ -52,10 +52,10 @@ ENVIRONMENT:
 
 
   SCONECTL_NOPULL
-           By default, sconectl pulls the CLI image 'cicd/sconecli:latest' first. If this environment 
-           variable is defined, sconectl does not pull the image. 
+           By default, `sconectl` pulls the CLI image 'cicd/sconecli:latest' first. If this environment 
+           variable is defined, `sconectl` does not pull the image. 
 
-VERSION: sconectl {VERSION}"#
+VERSION: `sconectl`"#)
     );
     if msg != "" {
         eprintln!("ERROR: {}", msg.red());
@@ -185,7 +185,7 @@ fn main() {
             }
         },
     }
-    let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#);
+    let mut s = format!(r#"docker run --entrypoint="" -t --rm {vol} {kubeconfig_vol} -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#);
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
@@ -195,10 +195,25 @@ fn main() {
     if args.len() <= 1 {
         help("You need to specify a COMMAND. (Error 696-7363-5766)")
     }
+    // pull image unless SCONECTL_NOPULL is set
+    match env::var("SCONECTL_NOPULL") {
+        Ok(_ignore) =>  println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
+        Err(_err) => {    
+            let mut sp = Spinner::new(Spinners::Dots9, format!("Pulling image {image}"));
+            let (code, _stdout, _stderr) = sh!("docker pull {image}");
+            sp.stop();
+            if code != 0 {
+                eprintln!("\n{} 'docker pull {image}'! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)", "Failed to".red());
+            }
+        },
+    }
+    let mut sp = Spinner::new(Spinners::Dots9, format!("Executing command {}", args[1]));
     let mut cmd = Command::new("sh");
     let status =    cmd.args(["-c", &s])
         .status()
         .expect("failed to execute '{s}'. (Error 8914-6233-13917)");
+        
+    sp.stop();
     if !status.success() {
         eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[1].blue(), status);
         process::exit(0x0101);
