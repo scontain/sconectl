@@ -185,7 +185,7 @@ fn main() {
             }
         },
     }
-    let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/root" -w "/root" {image}"#);
+    let mut s = format!(r#"docker run -t --rm {vol} {kubeconfig_vol} -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#);
     for i in 1..args.len() {
         if args[i] == "--help" && i == 1 {
             help("");
