@@ -16,7 +16,7 @@ use spinners::{Spinner, Spinners};
 fn help(msg: &str) -> ! {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-    eprintln!("{}{VERSION}", termimad::inline(
+    eprintln!("{} {VERSION}", termimad::inline(
 r#"# `sconectl` [COMMAND] [OPTIONS]
 
 `sconectl` helps to transform cloud-native applications into cloud-confidential applications. It supports converting native services into confidential services and services meshes into confidential service meshes. 
@@ -48,11 +48,11 @@ ENVIRONMENT:
 
   SCONECTL_REPO
            Set this to the OCI image repo that you are using. The default repo
-           is 'registry.scontain.com:5050'
+           is 'registry.scontain.com:5050/sconectl'
 
 
   SCONECTL_NOPULL
-           By default, `sconectl` pulls the CLI image 'cicd/sconecli:latest' first. If this environment 
+           By default, `sconectl` pulls the CLI image 'sconecli:latest' first. If this environment 
            variable is defined, `sconectl` does not pull the image. 
 
 VERSION: `sconectl`"#)
@@ -171,9 +171,9 @@ fn main() {
 
     let repo = match env::var("SCONECTL_REPO") {
         Ok(repo) =>  repo,
-        Err(_err) =>  format!("registry.scontain.com:5050")
+        Err(_err) =>  format!("registry.scontain.com:5050/sconectl")
     };
-    let image = format!("{repo}/cicd/sconecli:latest");
+    let image = format!("{repo}/sconecli:latest");
 
     // pull image unless SCONECTL_NOPULL is set
     match env::var("SCONECTL_NOPULL") {
@@ -199,21 +199,21 @@ fn main() {
     match env::var("SCONECTL_NOPULL") {
         Ok(_ignore) =>  println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
         Err(_err) => {    
-            let mut sp = Spinner::new(Spinners::Dots9, format!("Pulling image {image}"));
+            let mut sp = Spinner::with_timer(Spinners::Dots12, format!("Pulling image '{image}'"));
             let (code, _stdout, _stderr) = sh!("docker pull {image}");
-            sp.stop();
+            sp.stop_with_newline();
             if code != 0 {
                 eprintln!("\n{} 'docker pull {image}'! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)", "Failed to".red());
             }
         },
     }
-    let mut sp = Spinner::new(Spinners::Dots9, format!("Executing command {}", args[1]));
+    let mut sp = Spinner::with_timer(Spinners::Dots12, format!("Executing command '{}'", args[1]));
     let mut cmd = Command::new("sh");
     let status =    cmd.args(["-c", &s])
         .status()
         .expect("failed to execute '{s}'. (Error 8914-6233-13917)");
         
-    sp.stop();
+    sp.stop_with_newline();
     if !status.success() {
         eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[1].blue(), status);
         process::exit(0x0101);
