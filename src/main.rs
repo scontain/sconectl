@@ -5,19 +5,20 @@ use std::path::Path;
 use std::process;
 use std::process::Command;
 use which::which;
-use serde_json;
-use shells::*;
-use std::panic;
-use spinners::{Spinner, Spinners};
 
+use shells::*;
+use spinners::{Spinner, Spinners};
+use std::panic;
 
 /// prints a help message. If `msg` is not empty, prints also the message in red.
 
 fn help(msg: &str) -> ! {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-    eprintln!("{} {VERSION}", termimad::inline(
-r#"# `sconectl` [COMMAND] [OPTIONS]
+    eprintln!(
+        "{} {VERSION}",
+        termimad::inline(
+            r#"# `sconectl` [COMMAND] [OPTIONS]
 
 `sconectl` helps to transform cloud-native applications into cloud-confidential applications. It supports converting native services into confidential services and services meshes into confidential service meshes. 
 
@@ -55,9 +56,10 @@ ENVIRONMENT:
            By default, `sconectl` pulls the CLI image 'sconecli:latest' first. If this environment 
            variable is defined, `sconectl` does not pull the image. 
 
-VERSION: `sconectl`"#)
+VERSION: `sconectl`"#
+        )
     );
-    if msg != "" {
+    if !msg.is_empty() {
         eprintln!("ERROR: {}", msg.red());
         process::exit(0x0101);
     }
@@ -95,7 +97,7 @@ fn sanity() -> String {
                     Ok(val)  => {
                         match val["credsStore"].as_str() {
                             None => {}, // ok
-                            Some(value) => { if value != "" { eprintln!("{}", r#"ERROR: command execution will most likely fail. Please set field 'credsStore'" in file '~/.docker/config.json' to "" (Error 8352-13006-22294)"#.red()) } },
+                            Some(value) => { if !value.is_empty() { eprintln!("{}", r#"ERROR: command execution will most likely fail. Please set field 'credsStore'" in file '~/.docker/config.json' to "" (Error 8352-13006-22294)"#.red()) } },
                         }
                     },
                 }
@@ -107,27 +109,35 @@ fn sanity() -> String {
     if !Path::new(&path).exists() {
         // create this path
         if let Err(e) = fs::create_dir(&path) {
-            help(&format!("Error creating local directory {path}: {:?}! (Error 32113-24496-13076)", e));
+            help(&format!(
+                "Error creating local directory {path}: {:?}! (Error 32113-24496-13076)",
+                e
+            ));
         }
     }
     let path = format!("{home}/.scone");
     if !Path::new(&path).exists() {
         // create this path
         if let Err(e) = fs::create_dir(&path) {
-            help(&format!("Error creating local directory {path}: {:?}! (Error 29613-7923-17838)", e));
+            help(&format!(
+                "Error creating local directory {path}: {:?}! (Error 29613-7923-17838)",
+                e
+            ));
         }
     }
     let vol = match env::var("DOCKER_HOST") {
-        Ok(val) => { let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string(); format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#) },
-        Err(_e) => format!("-v /var/run/docker.sock:/var/run/docker.sock"),
+        Ok(val) => {
+            let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();
+            format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#)
+        }
+        Err(_e) => "-v /var/run/docker.sock:/var/run/docker.sock".to_string(),
     };
     vol
 }
 
-
 fn get_kube_config_volume() -> String {
     let kubeconfig_path = match env::var("KUBECONFIG") {
-        Ok(kubeconfig_path) =>  kubeconfig_path,
+        Ok(kubeconfig_path) => kubeconfig_path,
         // if KUBECONFIG is not set, let us try the default path
         Err(_err) => {
             let home = match env::var("HOME") {
@@ -140,11 +150,10 @@ fn get_kube_config_volume() -> String {
             } else {
                 "".to_owned()
             }
-        },
+        }
     };
-    return format!("-v {kubeconfig_path}:/root/.kube/config") // kubeconfig_path
+    return format!("-v {kubeconfig_path}:/root/.kube/config"); // kubeconfig_path
 }
-
 
 /// sconectl helps to transform cloud-native applications into cloud-confidential applications.
 /// It supports to transform native services into confidential services and services meshes
@@ -153,70 +162,77 @@ fn get_kube_config_volume() -> String {
 /// --userns=keep-id works only in rootless - fails when running as root
 
 fn main() {
-
     panic::set_hook(Box::new(|panic_info| {
         if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
             let err_msg = format!("{s:?}").red();
             eprintln!("A fatal error occurred: {err_msg} (Error 23882-16605-12717)");
         } else {
             let err_msg = format!("{panic_info}");
-            eprintln!("A fatal error occurred: {}. (Error 30339-23400-21867)", err_msg.trim_start_matches("panicked at ").red());
+            eprintln!(
+                "A fatal error occurred: {}. (Error 30339-23400-21867)",
+                err_msg.trim_start_matches("panicked at ").red()
+            );
         }
         process::exit(1);
     }));
-    
+
     let vol = sanity();
     let kubeconfig_vol = get_kube_config_volume();
     let args: Vec<String> = env::args().collect();
 
     let repo = match env::var("SCONECTL_REPO") {
-        Ok(repo) =>  repo,
-        Err(_err) =>  format!("registry.scontain.com:5050/sconectl")
+        Ok(repo) => repo,
+        Err(_err) => "registry.scontain.com:5050/sconectl".to_string(),
     };
     let image = format!("{repo}/sconecli:latest");
 
     // pull image unless SCONECTL_NOPULL is set
     match env::var("SCONECTL_NOPULL") {
-        Ok(_ignore) =>  println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
-        Err(_err) => {    
+        Ok(_ignore) => println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
+        Err(_err) => {
             let (code, _stdout, _stderr) = sh!("docker pull {image}");
             if code != 0 {
-                eprintln!(r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)"#, "Failed to".red());
+                eprintln!(
+                    r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)"#,
+                    "Failed to".red()
+                );
             }
-        },
+        }
     }
-    let mut s = format!(r#"docker run --entrypoint="" -t --rm {vol} {kubeconfig_vol} -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#);
-    for i in 1..args.len() {
-        if args[i] == "--help" && i == 1 {
+    let mut s = format!(
+        r#"docker run --entrypoint="" -t --rm {vol} {kubeconfig_vol} -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
+    );
+    for (i, arg) in args.iter().enumerate().skip(1) {
+        if arg == "--help" && i == 1 {
             help("");
         }
-        s.push_str(&format!(r#" "{}""#, args[i]));
+        s.push_str(&format!(r#" "{}""#, arg));
     }
     if args.len() <= 1 {
         help("You need to specify a COMMAND. (Error 696-7363-5766)")
     }
     // pull image unless SCONECTL_NOPULL is set
     match env::var("SCONECTL_NOPULL") {
-        Ok(_ignore) =>  println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
-        Err(_err) => {    
+        Ok(_ignore) => println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
+        Err(_err) => {
             let mut sp = Spinner::with_timer(Spinners::Dots12, format!("Pulling image '{image}'"));
             let (code, _stdout, _stderr) = sh!("docker pull {image}");
             sp.stop_with_newline();
             if code != 0 {
                 eprintln!("\n{} 'docker pull {image}'! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)", "Failed to".red());
             }
-        },
+        }
     }
     let mut sp = Spinner::with_timer(Spinners::Dots12, format!("Executing command '{}'", args[1]));
     let mut cmd = Command::new("sh");
-    let status =    cmd.args(["-c", &s])
+    let status = cmd
+        .args(["-c", &s])
         .status()
         .expect("failed to execute '{s}'. (Error 8914-6233-13917)");
-        
+
     sp.stop_with_newline();
     if !status.success() {
         eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[1].blue(), status);
         process::exit(0x0101);
     }
 }
-
