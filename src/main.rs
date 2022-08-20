@@ -1,4 +1,4 @@
-use colored::*;
+use colored::Colorize;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -6,7 +6,7 @@ use std::process;
 use std::process::Command;
 use which::which;
 
-use shells::*;
+use shells::sh;
 use spinners::{Spinner, Spinners};
 use std::panic;
 
@@ -70,8 +70,8 @@ VERSION: `sconectl`"#
 /// - check that all commands exists
 /// - check that all required directories exist
 /// - check that docker socket exists
-/// Note: https://github.com/scontain/scone_mesh_tutorial/blob/main/check_prerequisites.sh does some more sanity checking
-///       Run the check_prerequisites.sh to check more dependencies
+/// Note: `https://github.com/scontain/scone_mesh_tutorial/blob/main/check_prerequisites.sh` does some more sanity checking
+///       Run the `check_prerequisites.sh` to check more dependencies
 
 fn sanity() -> String {
     // do some sanity checking first
@@ -86,9 +86,7 @@ fn sanity() -> String {
         Err(_e) => help("environment variable HOME not defined. (Error 25873-23261-18708)"),
     };
     let path = format!("{home}/.docker");
-    if !Path::new(&path).exists() {
-        eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman. (Warning 22414-7450-14297)");
-    } else {
+    if Path::new(&path).exists() {
         let path = format!("{home}/.docker/config.json");
         match fs::read_to_string(path) {
             Ok(config_content) => {
@@ -104,7 +102,10 @@ fn sanity() -> String {
             },
             Err(_err) => eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 22852-10923-23603)"),
         }
+    } else {
+        eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman. (Warning 22414-7450-14297)");
     }
+
     let path = format!("{home}/.cas");
     if !Path::new(&path).exists() {
         // create this path
@@ -125,14 +126,14 @@ fn sanity() -> String {
             ));
         }
     }
-    let vol = match env::var("DOCKER_HOST") {
+    let volume = match env::var("DOCKER_HOST") {
         Ok(val) => {
-            let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();
-            format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#)
+            let volume = val.strip_prefix("unix://").unwrap_or(&val).to_string();
+            format!(r#"-e DOCKER_HOST="{val}" -v "{volume}":"{volume}""#)
         }
         Err(_e) => "-v /var/run/docker.sock:/var/run/docker.sock".to_string(),
     };
-    vol
+    volume
 }
 
 fn get_kube_config_volume() -> String {
