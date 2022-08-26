@@ -40,7 +40,10 @@ COMMAND:
 
 
 OPTIONS:
-    
+  --cas-config
+          CAS config JSON directory. Only absolute paths are supported. If the
+          directory does not exist, a CAS config JSON will be created if
+          `scone cas attest` command is used.
   --help
           Print help information. Other OPTIONS depend on the type of MANIFEST. 
           You need to specify -m <MANIFEST> to print more specific help messages.     
@@ -55,6 +58,12 @@ ENVIRONMENT:
   SCONECTL_NOPULL
            By default, `sconectl` pulls the CLI image 'sconecli:latest' first. If this environment 
            variable is defined, `sconectl` does not pull the image. 
+
+  SCONECTL_CAS_CONFIG
+           CAS config JSON directory. Only absolute paths are supported. If the
+           directory does not exist, a CAS config JSON will be created if
+           `scone cas attest` command is used. If `--cas-config` option is set, the value
+           from the command line argument will be used instead of `SCONECTL_CAS_CONFIG`.
 
 VERSION: `sconectl`"#
         )
@@ -106,16 +115,6 @@ fn sanity() -> String {
         eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman. (Warning 22414-7450-14297)");
     }
 
-    let path = format!("{home}/.cas");
-    if !Path::new(&path).exists() {
-        // create this path
-        if let Err(e) = fs::create_dir(&path) {
-            help(&format!(
-                "Error creating local directory {path}: {:?}! (Error 32113-24496-13076)",
-                e
-            ));
-        }
-    }
     let path = format!("{home}/.scone");
     if !Path::new(&path).exists() {
         // create this path
@@ -156,6 +155,62 @@ fn get_kube_config_volume() -> String {
     return format!("-v {kubeconfig_path}:/root/.kube/config"); // kubeconfig_path
 }
 
+fn get_cas_config_dir_env() -> String {
+    match env::var("SCONECTL_CAS_CONFIG") {
+        Ok(value) => value,
+        Err(_err) => "".to_owned(),
+    }
+}
+
+fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, Vec<String>){
+    let mut new_args = args.to_vec();
+    let cas_config_dir_args = match args.iter().position(|item| item == "--cas-config") {
+        Some(index) => (
+            match args.get(index + 1) {
+                Some(value) => {
+                    // do not pass --cas-config along to commands
+                    new_args.remove(index);
+                    new_args.remove(index);
+                    value
+                },
+                None => {
+                    eprintln!("No value provided for \"--cas-config\"");
+                    process::exit(0x0101);
+                },
+            }
+        ),
+        None => "",
+    };
+
+    let mut cas_config_dir = get_cas_config_dir_env();
+    // --cas--config has precedence over env var
+    if !cas_config_dir_args.is_empty() {
+        cas_config_dir = String::from(cas_config_dir_args);
+    }
+
+    if cas_config_dir.is_empty() {
+        (String::from(""), String::from("-v \"$HOME/.cas\":\"/root/.cas\""), new_args.to_vec())
+    } else {
+        // We only support absolute paths
+        if !cas_config_dir.starts_with("/") {
+            eprintln!("Only absolute paths are supported for CAS config (Error 20237-24960-17289)");
+            process::exit(0x0101);
+        }
+
+        if !Path::new(cas_config_dir.as_str()).exists() {
+            // create this path
+            if let Err(e) = fs::create_dir(cas_config_dir.to_owned()) {
+                help(&format!(
+                    "Error creating local directory for --cas-config {cas_config_dir}: {:?}! (Error 29466-27502-11632)",
+                    e
+                ));
+            }
+        }
+        (cas_config_dir.to_owned(), format!("-v \"{cas_config_dir}\":\"/root/.cas\""), new_args.to_vec())
+    }
+}
+
+
 /// sconectl helps to transform cloud-native applications into cloud-confidential applications.
 /// It supports to transform native services into confidential services and services meshes
 /// into confidential service meshes.
@@ -179,7 +234,12 @@ fn main() {
 
     let vol = sanity();
     let kubeconfig_vol = get_kube_config_volume();
-    let args: Vec<String> = env::args().collect();
+
+    let original_args: Vec<String> = env::args().collect();
+    let result = extract_cas_config_dir_and_volume(original_args);
+    let cas_config_dir_env = result.0;
+    let cas_config_dir_vol = result.1;
+    let args = result.2;
 
     let repo = match env::var("SCONECTL_REPO") {
         Ok(repo) => repo,
@@ -187,21 +247,8 @@ fn main() {
     };
     let image = format!("{repo}/sconecli:latest");
 
-    // pull image unless SCONECTL_NOPULL is set
-    match env::var("SCONECTL_NOPULL") {
-        Ok(_ignore) => println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
-        Err(_err) => {
-            let (code, _stdout, _stderr) = sh!("docker pull {image}");
-            if code != 0 {
-                eprintln!(
-                    r#"{} "docker pull {image}"! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)"#,
-                    "Failed to".red()
-                );
-            }
-        }
-    }
     let mut s = format!(
-        r#"docker run --entrypoint="" -t --rm {vol} {kubeconfig_vol} -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.cas":"/root/.cas" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
+        r#"docker run --entrypoint="" -t --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
     );
     for (i, arg) in args.iter().enumerate().skip(1) {
         if arg == "--help" && i == 1 {
