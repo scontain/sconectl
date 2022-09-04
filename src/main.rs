@@ -162,23 +162,23 @@ fn get_cas_config_dir_env() -> String {
     }
 }
 
-fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, Vec<String>){
+fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, Vec<String>) {
     let mut new_args = args.to_vec();
     let cas_config_dir_args = match args.iter().position(|item| item == "--cas-config") {
-        Some(index) => (
+        Some(index) => {
             match args.get(index + 1) {
                 Some(value) => {
                     // do not pass --cas-config along to commands
                     new_args.remove(index);
                     new_args.remove(index);
                     value
-                },
+                }
                 None => {
                     eprintln!("No value provided for \"--cas-config\"");
                     process::exit(0x0101);
-                },
+                }
             }
-        ),
+        }
         None => "",
     };
 
@@ -189,27 +189,34 @@ fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, Vec<
     }
 
     if cas_config_dir.is_empty() {
-        (String::from(""), String::from("-v \"$HOME/.cas\":\"/root/.cas\""), new_args.to_vec())
+        (
+            String::from(""),
+            String::from("-v \"$HOME/.cas\":\"/root/.cas\""),
+            new_args.to_vec(),
+        )
     } else {
         // We only support absolute paths
-        if !cas_config_dir.starts_with("/") {
+        if !cas_config_dir.starts_with('/') {
             eprintln!("Only absolute paths are supported for CAS config (Error 20237-24960-17289)");
             process::exit(0x0101);
         }
 
         if !Path::new(cas_config_dir.as_str()).exists() {
             // create this path
-            if let Err(e) = fs::create_dir(cas_config_dir.to_owned()) {
+            if let Err(e) = fs::create_dir(&cas_config_dir) {
                 help(&format!(
                     "Error creating local directory for --cas-config {cas_config_dir}: {:?}! (Error 29466-27502-11632)",
                     e
                 ));
             }
         }
-        (cas_config_dir.to_owned(), format!("-v \"{cas_config_dir}\":\"/root/.cas\""), new_args.to_vec())
+        (
+            cas_config_dir.to_owned(),
+            format!("-v \"{cas_config_dir}\":\"/root/.cas\""),
+            new_args.to_vec(),
+        )
     }
 }
-
 
 /// sconectl helps to transform cloud-native applications into cloud-confidential applications.
 /// It supports to transform native services into confidential services and services meshes
