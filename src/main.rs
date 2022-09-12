@@ -65,6 +65,15 @@ ENVIRONMENT:
            `scone cas attest` command is used. If `--cas-config` option is set, the value
            from the command line argument will be used instead of `SCONECTL_CAS_CONFIG`.
 
+  KUBECONFIG
+           By default we use path '$HOME/.kube/config' for the Kubernetes config.
+           If the $KUBECONFIG environment variable is set, then it is used instead.
+
+  DOCKER_HOST
+           By default we use socket '/var/run/docker.sock' to talk to the Docker engine.
+           One can overwrite this default with the help of this environment variable. For
+           example, you might want to overwrite this in case you are using podman. 
+
 VERSION: `sconectl`"#
         )
     );
@@ -255,7 +264,7 @@ fn main() {
     let image = format!("{repo}/sconecli:latest");
 
     let mut s = format!(
-        r#"docker run --entrypoint="" -t --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
+        r#"docker run --entrypoint="" -ti --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
     );
     for (i, arg) in args.iter().enumerate().skip(1) {
         if arg == "--help" && i == 1 {
@@ -289,5 +298,7 @@ fn main() {
     if !status.success() {
         eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[1].blue(), status);
         process::exit(0x0101);
+    } else {
+        println!("");
     }
 }
