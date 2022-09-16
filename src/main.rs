@@ -46,13 +46,13 @@ OPTIONS:
           `scone cas attest` command is used.
   --help
           Print help information. Other OPTIONS depend on the type of MANIFEST. 
-          You need to specify -m <MANIFEST> to print more specific help messages.     
+          You need to specify `-m <MANIFEST>` to print more specific help messages.     
 
 ENVIRONMENT:
 
   SCONECTL_REPO
            Set this to the OCI image repo that you are using. The default repo
-           is 'registry.scontain.com:5050/sconectl'
+           is `registry.scontain.com:5050/sconectl`
 
 
   SCONECTL_NOPULL
@@ -66,13 +66,23 @@ ENVIRONMENT:
            from the command line argument will be used instead of `SCONECTL_CAS_CONFIG`.
 
   KUBECONFIG
-           By default we use path '$HOME/.kube/config' for the Kubernetes config.
-           If the $KUBECONFIG environment variable is set, then it is used instead.
+           By default we use path `$HOME/.kube/config` for the Kubernetes config.
+           If the $KUBECONFIG environment variable is set, then this file is used instead.
+
+           **NOTE**: We assume that the certificates are embedded in the config file.  
+           You might therefore need to start minikube as follows: 
+                `minikube start --embed-certs`
+
+           **NOTE**: We only support a single file in `KUBECONFIG`, i.e., no lists of config
+           files are supported yet.
 
   DOCKER_HOST
-           By default we use socket '/var/run/docker.sock' to talk to the Docker engine.
+           By default we use socket `/var/run/docker.sock` to talk to the Docker engine.
            One can overwrite this default with the help of this environment variable. For
            example, you might want to overwrite this in case you are using podman. 
+
+SUPPORT: If you need help, send an email to `info@scontain.com` with a description of the
+         issue. Ideally, with a log that shows the problem.
 
 VERSION: `sconectl`"#
         )
