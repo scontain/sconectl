@@ -309,6 +309,6 @@ fn main() {
         eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[1].blue(), status);
         process::exit(0x0101);
     } else {
-        println!("");
+        println!();
     }
 }
