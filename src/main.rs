@@ -48,11 +48,15 @@ OPTIONS:
           Print help information. Other OPTIONS depend on the type of MANIFEST. 
           You need to specify `-m <MANIFEST>` to print more specific help messages.     
 
+  --quiet
+          By default, sconectl shows a spinner. You can disable the spinner by setting
+          option --quiet. 
+
 ENVIRONMENT:
 
   SCONECTL_REPO
            Set this to the OCI image repo that you are using. The default repo
-           is `registry.scontain.com:5050/sconectl`
+           is `registry.scontain.com/sconectl`
 
 
   SCONECTL_NOPULL
@@ -266,10 +270,12 @@ fn main() {
     let cas_config_dir_env = result.0;
     let cas_config_dir_vol = result.1;
     let args = result.2;
+    let mut command_index = 1;
+    let mut show_spinner = true;
 
     let repo = match env::var("SCONECTL_REPO") {
         Ok(repo) => repo,
-        Err(_err) => "registry.scontain.com:5050/sconectl".to_string(),
+        Err(_err) => "registry.scontain.com/sconectl".to_string(),
     };
     let image = format!("{repo}/sconecli:latest");
 
@@ -280,33 +286,50 @@ fn main() {
         if arg == "--help" && i == 1 {
             help("");
         }
-        s.push_str(&format!(r#" "{}""#, arg));
+        if arg == "--quiet" && i == 1 {
+            show_spinner = false;
+            command_index += 1;
+        } else {
+            s.push_str(&format!(r#" "{}""#, arg));
+        }
     }
-    if args.len() <= 1 {
+    if args.len() <= command_index {
         help("You need to specify a COMMAND. (Error 696-7363-5766)")
     }
     // pull image unless SCONECTL_NOPULL is set
     match env::var("SCONECTL_NOPULL") {
         Ok(_ignore) => println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
         Err(_err) => {
-            let mut sp = Spinner::with_timer(Spinners::Dots12, format!("Pulling image '{image}'"));
+            let stop = if show_spinner {
+                Some(Spinner::with_timer(Spinners::Dots12, format!("Pulling image '{image}'")))
+            } else {
+                None
+            };
             let (code, _stdout, _stderr) = sh!("docker pull {image}");
-            sp.stop_with_newline();
+            if let  Some(mut sp) = stop {
+                sp.stop_with_newline();
+            }
             if code != 0 {
                 eprintln!("\n{} 'docker pull {image}'! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)", "Failed to".red());
             }
         }
     }
-    let mut sp = Spinner::with_timer(Spinners::Dots12, format!("Executing command '{}'", args[1]));
+    let stop = if show_spinner {
+        Some(Spinner::with_timer(Spinners::Dots12, format!("Executing command '{}'", args[command_index])))
+    } else {
+        None
+    };
     let mut cmd = Command::new("sh");
     let status = cmd
         .args(["-c", &s])
         .status()
         .expect("failed to execute '{s}'. (Error 8914-6233-13917)");
 
-    sp.stop_with_newline();
+    if let Some(mut sp) = stop {
+        sp.stop_with_newline();
+    }
     if !status.success() {
-        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[1].blue(), status);
+        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[command_index].blue(), status);
         process::exit(0x0101);
     } else {
         println!();

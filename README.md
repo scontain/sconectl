@@ -83,5 +83,5 @@ alias sconectl="docker run -it --rm \
     -v \"$HOME/.scone:/root/.scone\" \
     -v \"\$PWD:/wd\" \
     -w /wd \
-    registry.scontain.com:5050/cicd/sconecli:latest"
+    registry.scontain.com/cicd/sconecli:latest"
 ```
