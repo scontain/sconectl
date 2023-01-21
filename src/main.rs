@@ -1,15 +1,15 @@
 use colored::Colorize;
-use spinners::{Spinner, Spinners};
-use std::panic;
 use shells::sh;
+use spinners::{Spinner, Spinners};
+use std::env;
+use std::panic;
 use std::process;
 use std::process::Command;
-use std::env;
 
 mod helpers;
 use helpers::{help, sanity};
 mod config;
-use config::{get_kube_config_volume, extract_cas_config_dir_and_volume};
+use config::{extract_cas_config_dir_and_volume, get_kube_config_volume};
 
 /// sconectl helps to transform cloud-native applications into cloud-confidential applications.
 /// It supports to transform native services into confidential services and services meshes
@@ -50,7 +50,7 @@ fn main() {
     let image = format!("{repo}/sconecli:latest");
 
     let mut s = format!(
-        r#"docker run --entrypoint="" -ti --network=host --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
+        r#"docker run --entrypoint="" --network=host --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
     );
     for (i, arg) in args.iter().enumerate().skip(1) {
         if arg == "--help" && i == 1 {
@@ -60,7 +60,7 @@ fn main() {
             show_spinner = false;
             command_index += 1;
         } else {
-            s.push_str(&format!(r#" "{}""#, arg));
+            s.push_str(&format!(r#" "{arg}""#));
         }
     }
     if args.len() <= command_index {
@@ -71,12 +71,15 @@ fn main() {
         Ok(_ignore) => println!("Warning: SCONECTL_NOPULL is set hence, not pulling CLI image"),
         Err(_err) => {
             let stop = if show_spinner {
-                Some(Spinner::with_timer(Spinners::Dots12, format!("Pulling image '{image}'")))
+                Some(Spinner::with_timer(
+                    Spinners::Dots12,
+                    format!("Pulling image '{image}'"),
+                ))
             } else {
                 None
             };
             let (code, _stdout, _stderr) = sh!("docker pull {image}");
-            if let  Some(mut sp) = stop {
+            if let Some(mut sp) = stop {
                 sp.stop_with_newline();
             }
             if code != 0 {
@@ -85,7 +88,10 @@ fn main() {
         }
     }
     let stop = if show_spinner {
-        Some(Spinner::with_timer(Spinners::Dots12, format!("Executing command '{}'", args[command_index])))
+        Some(Spinner::with_timer(
+            Spinners::Dots12,
+            format!("Executing command '{}'", args[command_index]),
+        ))
     } else {
         None
     };

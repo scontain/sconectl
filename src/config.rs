@@ -1,8 +1,8 @@
+use crate::helpers::help;
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::process;
-use crate::helpers::help;
 
 pub fn get_kube_config_volume() -> String {
     let kubeconfig_path = match env::var("KUBECONFIG") {
@@ -21,7 +21,7 @@ pub fn get_kube_config_volume() -> String {
             }
         }
     };
-    return format!("-v {kubeconfig_path}:/root/.kube/config"); // kubeconfig_path
+    format!("-v {kubeconfig_path}:/root/.kube/config") // kubeconfig_path
 }
 
 pub fn get_cas_config_dir_env() -> String {
@@ -74,8 +74,7 @@ pub fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, 
             // create this path
             if let Err(e) = fs::create_dir(&cas_config_dir) {
                 help(&format!(
-                    "Error creating local directory for --cas-config {cas_config_dir}: {:?}! (Error 29466-27502-11632)",
-                    e
+                    "Error creating local directory for --cas-config {cas_config_dir}: {e:?}! (Error 29466-27502-11632)"
                 ));
             }
         }
