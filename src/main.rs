@@ -50,7 +50,7 @@ fn main() {
     let image = format!("{repo}/sconecli:latest");
 
     let mut s = format!(
-        r#"docker run --entrypoint="" --network=host --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
+        r#"docker run --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --network=host --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
     );
     for (i, arg) in args.iter().enumerate().skip(1) {
         if arg == "--help" && i == 1 {
