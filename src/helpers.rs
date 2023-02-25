@@ -1,10 +1,10 @@
 use colored::Colorize;
+
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::process;
 use which::which;
-use get_if_addrs;
 
 /// prints a help message. If `msg` is not empty, prints also the message in red.
 
@@ -144,7 +144,6 @@ pub fn sanity() -> String {
     let mut docker0_ip = String::from("172.17.0.1");
     let mut docker0_if_exist = false;
     for iface in get_if_addrs::get_if_addrs().unwrap() {
-        println!("Found interface: {}.", iface.name);
         if iface.name == "docker0" {
             docker0_if_exist = true;
             docker0_ip = iface.ip().to_string();
@@ -158,14 +157,14 @@ pub fn sanity() -> String {
                 let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();
                 format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#)
             } else if val.starts_with("tcp://") {
-                if ! docker0_if_exist {
-                    println!("Interface 'docker0' was not found but docker socket with TCP schema was detected. Will use default docker network 172.17.0.1.");
+                if !docker0_if_exist {
+                    eprintln!("Interface 'docker0' was not found but docker socket with TCP schema was detected. Will use default docker network 172.17.0.1.");
                 }
-                println!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={} to access docker socket inside container.", docker0_ip );
+                eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={docker0_ip} to access docker socket inside container." );
                 format!(r#"-e DOCKER_HOST="{docker0_ip}""#)
             } else {
-                println!("Docker socket: {} with unknown schema was detected.", val);
-                format!(r#"-e DOCKER_HOST=/var/run/docker.sock -v /var/run/docker.sock:/var/run/docker.sock"#)
+                eprintln!("Docker socket: {val} with unknown schema was detected.");
+                r#"-e DOCKER_HOST=/var/run/docker.sock -v /var/run/docker.sock:/var/run/docker.sock"#.to_string()
             }
         }
         Err(_e) => "-v /var/run/docker.sock:/var/run/docker.sock".to_string(),
