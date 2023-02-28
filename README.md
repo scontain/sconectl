@@ -129,5 +129,5 @@ ENVIRONMENT:
 SUPPORT: If you need help, send an email to info@scontain.com with a description of the
          issue. Ideally, with a log that shows the problem.
 
-VERSION: sconectl 0.2.16
+VERSION: sconectl 0.2.17
 ```
