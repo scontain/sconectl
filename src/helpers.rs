@@ -158,10 +158,10 @@ pub fn sanity() -> String {
                 format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#)
             } else if val.starts_with("tcp://") || val.starts_with(&docker0_ip) {
                 if !docker0_if_exist {
-                    eprintln!("Interface 'docker0' was not found but docker socket with TCP schema was detected. Will use default docker network 172.17.0.1.");
+                    eprintln!("Interface 'docker0' was not found but docker socket with TCP schema was detected.");
                 }
-                eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={docker0_ip} to access docker socket inside container." );
-                format!(r#"-e DOCKER_HOST="{docker0_ip}""#)
+                eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={val} to access docker socket inside container." );
+                format!(r#"-e DOCKER_HOST="{val}""#)
             } else {
                 eprintln!("Docker socket: {val} with unknown schema was detected.");
                 r#"-e DOCKER_HOST=/var/run/docker.sock -v /var/run/docker.sock:/var/run/docker.sock"#.to_string()
