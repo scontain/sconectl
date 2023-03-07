@@ -156,7 +156,7 @@ pub fn sanity() -> String {
             if val.starts_with("unix://") {
                 let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();
                 format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#)
-            } else if val.starts_with("tcp://") {
+            } else if val.starts_with("tcp://") || val.starts_with(&docker0_ip) {
                 if !docker0_if_exist {
                     eprintln!("Interface 'docker0' was not found but docker socket with TCP schema was detected. Will use default docker network 172.17.0.1.");
                 }
