@@ -1,4 +1,5 @@
 use colored::Colorize;
+use serde_json::Error;
 
 use std::env;
 use std::fs;
@@ -151,7 +152,7 @@ pub fn sanity() -> String {
         }
     }
 
-    let vol = match env::var("DOCKER_HOST") {
+    let mut vol = match env::var("DOCKER_HOST") {
         Ok(val) => {
             if val.starts_with("unix://") {
                 let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();
@@ -169,5 +170,24 @@ pub fn sanity() -> String {
         }
         Err(_e) => "-v /var/run/docker.sock:/var/run/docker.sock".to_string(),
     };
+
+    match env::var("HOST_HOME") {
+        Ok(val) => {
+           vol.push_str(&format!(r#" "-e$HOME={val}""#));
+        }
+        Err(_e) => {
+            vol.push_str(&format!(r#""#));
+        }    
+    };
+
+    match env::var("HOST_WD") {
+        Ok(val) => {
+           vol.push_str(&format!(r#" -v "{val}":"{val}" -w "{val}"#));
+        }
+        Err(_e) => {
+            vol.push_str(&format!(r#" -v "$PWD":"/wd" -w "/wd""#));
+        }    
+    };
+
     vol
 }

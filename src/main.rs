@@ -11,6 +11,7 @@ use helpers::{help, sanity};
 mod config;
 use config::{extract_cas_config_dir_and_volume, get_kube_config_volume};
 
+use std::io::{self, Write};
 /// sconectl helps to transform cloud-native applications into cloud-confidential applications.
 /// It supports to transform native services into confidential services and services meshes
 /// into confidential service meshes.
@@ -48,19 +49,95 @@ fn main() {
         Err(_err) => "registry.scontain.com/sconectl".to_string(),
     };
     let image = format!("{repo}/sconecli:latest");
-
-    let mut s = format!(
-        r#"docker run --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
+    //  docker run -d --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" 
+    // --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":"/wd" -w "/wd" -v "$HOME/.cas":"/root/.cas" 
+    // -v /home/vasyl/.kube/config:/root/.kube/config -e "SCONECTL_CAS_CONFIG=" -e "SCONECTL_REPO=registry.scontain.com/sconectl" 
+    // -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" registry.scontain.com/sconectl/sconecli:latest
+    let mut docker_cmd = format!(
+        r#"docker run -d --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" {image} sleep 1000"#
     );
+
+    let mut cmd = Command::new("sh");
+    let mut output = cmd
+        .args(["-c", &docker_cmd])
+        .output()
+        .expect("failed to execute '{docker_cmd}'. (Error 8914-6233-13917)");
+
+    if !output.status.success() {
+        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[command_index].blue(), output.status);
+        process::exit(0x0101);
+    } else {
+        println!();
+    }
+    
+    // lets remove /n at the end
+    output.stdout.pop();
+
+    let s = match String::from_utf8(output.stdout) {
+        Ok(path) => Ok(path),
+        Err(e) => Err(format!("Invalid UTF-8 sequence: {}", e)),
+    };
+    
+    let container_id = s.unwrap();
+    let mut docker_cp = format!(
+        r#"docker cp ~/.docker {container_id}:/root/.docker"#
+    );
+
+    println!("{docker_cp}");
+    let mut cmd = Command::new("sh");
+    let output = cmd
+        .args(["-c", &docker_cp])
+        .output()
+        .expect("failed to execute '{docker_cp}'. (Error 8914-6233-13917)");
+
+    if !output.status.success() {
+        println!("status: {}", output.status);
+        io::stdout().write_all(&output.stdout).unwrap();
+        io::stderr().write_all(&output.stderr).unwrap();
+        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[command_index].blue(), output.status);
+        process::exit(0x0101);
+    } else {
+        println!();
+    }
+    
+    let docker_exec = format!(
+        r#"docker exec {container_id} ls -la /root"#
+    );
+    println!("{docker_exec}");
+    let mut cmd = Command::new("sh");
+    let mut output = cmd
+        .args(["-c", &docker_exec])
+        .output()
+        .expect("failed to execute '{docker_exec}'. (Error 8914-6233-13917)");
+
+    println!("status: {}", output.status);
+    io::stdout().write_all(&output.stdout).unwrap();
+    io::stderr().write_all(&output.stderr).unwrap();
+
+    if !output.status.success() {
+        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[command_index].blue(), output.status);
+        process::exit(0x0101);
+    } else {
+        println!();
+    }
+
+    io::stdout().write_all(&output.stdout).unwrap();
+    io::stderr().write_all(&output.stderr).unwrap();
+
+        
     for (i, arg) in args.iter().enumerate().skip(1) {
         if arg == "--help" && i == 1 {
             help("");
+        }
+        if arg == "--print-cmd" && i == 1 {
+            println!("{}",docker_cmd);
+            command_index += 1;
         }
         if arg == "--quiet" && i == 1 {
             show_spinner = false;
             command_index += 1;
         } else {
-            s.push_str(&format!(r#" "{arg}""#));
+            docker_cmd.push_str(&format!(r#" "{arg}""#));
         }
     }
     if args.len() <= command_index {
@@ -97,9 +174,9 @@ fn main() {
     };
     let mut cmd = Command::new("sh");
     let status = cmd
-        .args(["-c", &s])
+        .args(["-c", &docker_cmd])
         .status()
-        .expect("failed to execute '{s}'. (Error 8914-6233-13917)");
+        .expect("failed to execute '{docker_cmd}'. (Error 8914-6233-13917)");
 
     if let Some(mut sp) = stop {
         sp.stop_with_newline();
@@ -111,3 +188,19 @@ fn main() {
         println!();
     }
 }
+
+
+pub fn execute_sh(command: &str) -> String {
+    let cmd = Command::new("sh");
+    let output = cmd
+        .args(["-c", &command])
+        .output()
+        .expect("failed to execute '{docker_cmd}'. (Error 8914-6233-13917)");
+   
+    if !output.status.success() {
+        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), command, output.status);
+        process::exit(0x0101);
+    } else {
+
+    }
+  }
