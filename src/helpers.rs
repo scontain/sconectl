@@ -1,62 +1,36 @@
+use clap::ArgMatches;
 use colored::Colorize;
-use serde_json::Error;
 
+use clap::{Arg, Command};
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::process;
 use which::which;
 
-/// prints a help message. If `msg` is not empty, prints also the message in red.
+static  long_sconeclt_about : &str = "sconectl helps to transform cloud-native applications into cloud-confidential applications. It supports converting native services into confidential services and services meshes into confidential service meshes.
 
-pub fn help(msg: &str) -> ! {
-    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    sconectl is a CLI that runs on your development machine and executes scone commands in a local container: [scone](https://sconedocs.github.io/) is a platform to convert native applications into confidential applications. sconectl uses docker or podman to run the commands.
 
-    eprintln!(
-        "sconectl [COMMAND] [OPTIONS]
+    Ensure all files you want to pass along are in the current working directory or subdirectories. This is needed since we pass the current working directory to the docker image that executes the command.
 
-sconectl helps to transform cloud-native applications into cloud-confidential applications. It supports converting native services into confidential services and services meshes into confidential service meshes. 
+    If you want to use podman instead, please set the environment variable DOCKER_HOST to your podman API (printed by podman during startup). Currently, podman still has some open issues that need to be solved.
 
-sconectl is a CLI that runs on your development machine and executes scone commands in a local container: [scone](https://sconedocs.github.io/) is a platform to convert native applications into confidential applications. sconectl uses docker or podman to run the commands. 
+    sconectl runs on macOS and Linux, and if there is some demand, on Windows. Try out
 
-Ensure all files you want to pass along are in the current working directory or subdirectories. This is needed since we pass the current working directory to the docker image that executes the command.
+    https://github.com/scontain/scone_mesh_tutorial
 
-If you want to use podman instead, please set the environment variable DOCKER_HOST to your podman API (printed by podman during startup). Currently, podman still has some open issues that need to be solved.
-
-sconectl runs on macOS and Linux, and if there is some demand, on Windows. Try out
-
-   https://github.com/scontain/scone_mesh_tutorial 
-
-to test your sconectl setup. In particular, it will test that all prerequisites are satisfied
-and gives some examples on how to use sconectl.
-
-COMMAND:
-  apply   apply manifest. Execute sconectl apply --help for more info.
-
-
-OPTIONS:
-  --cas-config
-          CAS config JSON directory. Only absolute paths are supported. If the
-          directory does not exist, a CAS config JSON will be created if
-          scone cas attest command is used.
-  --help
-          Print help information. Other OPTIONS depend on the type of MANIFEST. 
-          You need to specify -m <MANIFEST> to print more specific help messages.     
-
-  --quiet
-          By default, sconectl shows a spinner. You can disable the spinner by setting
-          option --quiet. 
-
+    to test your sconectl setup. In particular, it will test that all prerequisites are satisfied
+    and gives some examples on how to use sconectl.
 ENVIRONMENT:
 
   SCONECTL_REPO
            Set this to the OCI image repo that you are using. The default repo
            is registry.scontain.com/sconectl
 
-
   SCONECTL_NOPULL
-           By default, sconectl pulls the CLI image sconecli:latest first. If this environment 
-           variable is defined, sconectl does not pull the image. 
+           By default, sconectl pulls the CLI image sconecli:latest first. If this environment
+           variable is defined, sconectl does not pull the image.
 
   SCONECTL_CAS_CONFIG
            CAS config JSON directory. Only absolute paths are supported. If the
@@ -68,8 +42,8 @@ ENVIRONMENT:
            By default we use path $HOME/.kube/config for the Kubernetes config.
            If the $KUBECONFIG environment variable is set, then this file is used instead.
 
-           **NOTE**: We assume that the certificates are embedded in the config file.  
-           You might therefore need to start minikube as follows: 
+           **NOTE**: We assume that the certificates are embedded in the config file.
+           You might therefore need to start minikube as follows:
                 minikube start --embed-certs
 
            **NOTE**: We only support a single file in KUBECONFIG, i.e., no lists of config
@@ -78,18 +52,12 @@ ENVIRONMENT:
   DOCKER_HOST
            By default we use socket /var/run/docker.sock to talk to the Docker engine.
            One can overwrite this default with the help of this environment variable. For
-           example, you might want to overwrite this in case you are using podman. 
+           example, you might want to overwrite this in case you are using podman.
 
 SUPPORT: If you need help, send an email to info@scontain.com with a description of the
          issue. Ideally, with a log that shows the problem.
+";
 
-VERSION: sconectl {VERSION}" );
-    if !msg.is_empty() {
-        eprintln!("ERROR: {}", msg.red());
-        process::exit(0x0101);
-    }
-    process::exit(0);
-}
 
 /// do some sanity checking
 /// - check that all commands exists
@@ -98,17 +66,76 @@ VERSION: sconectl {VERSION}" );
 /// Note: `https://github.com/scontain/scone_mesh_tutorial/blob/main/check_prerequisites.sh` does some more sanity checking
 ///       Run the `check_prerequisites.sh` to check more dependencies
 
+pub fn cmd() -> ArgMatches {
+    let m = Command::new("sconectl")
+        .author("info@scontain.com")
+        .version(env!("CARGO_PKG_VERSION"))
+        .after_long_help(long_sconeclt_about)
+        .arg(
+            Arg::new("cas_config")
+                .long("cas_config")
+                .help("CAS config JSON directory")
+                .long_help(
+                    "CAS config JSON directory. Only absolute paths are supported. If the
+            directory does not exist, a CAS config JSON will be created if
+            scone cas attest command is used.",
+                ),
+        )
+        .arg(
+            Arg::new("quite")
+                .long("quite")
+                .help("Disable spinner")
+                .action(clap::ArgAction::SetFalse)
+                .long_help(
+                    "By default, sconectl shows a spinner. You can disable the spinner by setting
+                    option --quiet.",
+                ),
+        )
+        .subcommand(
+            Command::new("apply")
+                .disable_help_flag(true)
+                .allow_external_subcommands(true)
+                .about("Controls configuration features")
+                .arg(
+                    Arg::new("help")
+                        .long("help")
+                        .action(clap::ArgAction::SetTrue)
+                )
+                .arg(
+                    Arg::new("filename")
+                        .short('f')
+                        .help("Path to manifest"),
+                ),
+        )
+        .after_help(
+            "Longer explanation to appear after the options when \
+                 displaying the help information from --help or -h",
+        )
+        .get_matches();
+    m
+}
+
 pub fn sanity() -> String {
     // do some sanity checking first
     if let Err(_e) = which("sh") {
-        help("Shell `sh` not installed. Please install! (Error 4497-4397-12312)")
+        eprintln!(
+            "{}",
+            "Shell `sh` not installed. Please install! (Error 4497-4397-12312)".red()
+        )
     }
     if let Err(_e) = which("docker") {
-        help("Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/ (Error 21214-27681-19217)")
+        eprintln!("{}", "Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/ (Error 21214-27681-19217)".red())
     }
     let home = match env::var("HOME") {
         Ok(val) => val,
-        Err(_e) => help("environment variable HOME not defined. (Error 25873-23261-18708)"),
+        Err(_e) => {
+            eprintln!(
+                "{}",
+                "environment variable HOME not defined. Using ~ instead. (Error 25873-23261-18708)"
+                    .red()
+            );
+            process::exit(0x0101);
+        }
     };
     let path = format!("{home}/.docker");
     if Path::new(&path).exists() {
@@ -135,9 +162,10 @@ pub fn sanity() -> String {
     if !Path::new(&path).exists() {
         // create this path
         if let Err(e) = fs::create_dir(&path) {
-            help(&format!(
-                "Error creating local directory {path}: {e:?}! (Error 29613-7923-17838)"
-            ));
+            eprintln!(
+                "{}",
+                &format!("Error creating local directory {path}: {e:?}! (Error 29613-7923-17838)")
+            );
         }
     }
 
@@ -173,20 +201,20 @@ pub fn sanity() -> String {
 
     match env::var("HOST_HOME") {
         Ok(val) => {
-           vol.push_str(&format!(r#" "-e$HOME={val}""#));
+            vol.push_str(&format!(r#" "-e$HOME={val}""#));
         }
         Err(_e) => {
             vol.push_str(&format!(r#""#));
-        }    
+        }
     };
 
     match env::var("HOST_WD") {
         Ok(val) => {
-           vol.push_str(&format!(r#" -v "{val}":"{val}" -w "{val}"#));
+            vol.push_str(&format!(r#" -v "{val}":"{val}" -w "{val}"#));
         }
         Err(_e) => {
             vol.push_str(&format!(r#" -v "$PWD":"/wd" -w "/wd""#));
-        }    
+        }
     };
 
     vol

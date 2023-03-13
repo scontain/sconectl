@@ -1,4 +1,4 @@
-use crate::helpers::help;
+use colored::Colorize;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -11,7 +11,13 @@ pub fn get_kube_config_volume() -> String {
         Err(_err) => {
             let home = match env::var("HOME") {
                 Ok(val) => val,
-                Err(_e) => help("environment variable HOME not defined. (Error 12874-23995-6201)"),
+                Err(_e) => {
+                    eprintln!(
+                        "{}",
+                        "environment variable HOME not defined. (Error 12874-23995-6201)".red()
+                    );
+                    process::exit(0x0101);
+                }
             };
             let path = format!("{home}/.kube/config");
             if Path::new(&path).exists() {
@@ -73,9 +79,8 @@ pub fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, 
         if !Path::new(cas_config_dir.as_str()).exists() {
             // create this path
             if let Err(e) = fs::create_dir(&cas_config_dir) {
-                help(&format!(
-                    "Error creating local directory for --cas-config {cas_config_dir}: {e:?}! (Error 29466-27502-11632)"
-                ));
+                eprintln!("{}",&format!("Error creating local directory for --cas-config {cas_config_dir}: {e:?}! (Error 29466-27502-11632)").red());
+                process::exit(0x0101);
             }
         }
         (
