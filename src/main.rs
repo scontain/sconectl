@@ -2,9 +2,9 @@ use colored::Colorize;
 use shells::sh;
 use spinners::{Spinner, Spinners};
 use std::env;
+use std::ffi::OsString;
 use std::panic;
 use std::process;
-use std::ffi::OsString;
 mod helpers;
 use helpers::{cmd, sanity};
 mod config;
@@ -33,29 +33,54 @@ fn main() {
     }));
 
     let matches = cmd();
-    println!("{:?}",matches);
+    println!("{:?}", matches);
     let mut apply_help = false;
+    let mut apply_help_help = false;
     let show_spinner = matches.get_flag("quite");
-    // let mut apply_external;
-    // let mut apply_ext_args;
+    let mut apply_external: String = String::new();
+    let mut apply_ext_args: Vec<&OsString> = Vec::new();
+    let apply_filname: String;
     if let Some(sub_m) = matches.subcommand_matches("apply") {
-        if sub_m.get_flag("help") {
+        if sub_m.get_count("help") == 1 {
             apply_help = true;
         }
 
+        if sub_m.get_count("help") >= 2 {
+            apply_help_help = true;
+            println!("doulbe help {:?}", sub_m.get_count("help"));
+        }
+
+        if let Some(f) = sub_m.get_one::<String>("filename") {
+            apply_filname = f.to_string();
+            println!("filename is {}", apply_filname);
+        }
+        println!("{:?}", sub_m.subcommand());
+
         match sub_m.subcommand() {
             Some((external, ext_m)) => {
-                 let ext_args: Vec<_> = ext_m.get_many::<OsString>("").unwrap().collect();
-                 println!("{:?}",external);
-                 println!("{:?}",ext_args);
-            },
-            _ => {},
+                let ext_args: Vec<_> = ext_m.get_many::<OsString>("").unwrap().collect();
+                apply_external = external.to_string();
+                apply_ext_args = ext_args;
+                println!("external {:?}", apply_external);
+                println!("external {:?}", apply_ext_args);
+            }
+            _ => {}
         }
     }
-    
-    // TODO
-    // get all apply argumetns as one nice string 
-        
+    let mut ext_string: Vec<String> = Vec::new();
+    ext_string.push(apply_external.to_string());
+    if !apply_ext_args.is_empty() {
+        let mut vecs: Vec<String> = apply_ext_args
+            .iter()
+            .map(|s| s.to_string_lossy().to_string())
+            .collect();
+        ext_string.append(&mut vecs);
+    }
+
+    let apply_args = ext_string.join(" ");
+
+    println!("args {:}", apply_args);
+
     let vol = sanity();
     let kubeconfig_vol = get_kube_config_volume();
 
@@ -97,8 +122,8 @@ fn main() {
             r#"docker run -t --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" {image} apply --help"#
         );
         let o = execute_sh(docker_sconecli_d_cmd);
-        println!("{}",o);
-        process::exit(0); 
+        println!("{}", o);
+        process::exit(0);
     }
 
     // let stop = if show_spinner {

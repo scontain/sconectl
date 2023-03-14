@@ -58,7 +58,6 @@ SUPPORT: If you need help, send an email to info@scontain.com with a description
          issue. Ideally, with a log that shows the problem.
 ";
 
-
 /// do some sanity checking
 /// - check that all commands exists
 /// - check that all required directories exist
@@ -70,7 +69,7 @@ pub fn cmd() -> ArgMatches {
     let m = Command::new("sconectl")
         .author("info@scontain.com")
         .version(env!("CARGO_PKG_VERSION"))
-        .after_long_help(long_sconeclt_about)
+        .before_long_help(long_sconeclt_about)
         .arg(
             Arg::new("cas_config")
                 .long("cas_config")
@@ -96,16 +95,8 @@ pub fn cmd() -> ArgMatches {
                 .disable_help_flag(true)
                 .allow_external_subcommands(true)
                 .about("Controls configuration features")
-                .arg(
-                    Arg::new("help")
-                        .long("help")
-                        .action(clap::ArgAction::SetTrue)
-                )
-                .arg(
-                    Arg::new("filename")
-                        .short('f')
-                        .help("Path to manifest"),
-                ),
+                .arg(Arg::new("help").long("help").action(clap::ArgAction::Count))
+                .arg(Arg::new("filename").short('f').help("Path to manifest")),
         )
         .after_help(
             "Longer explanation to appear after the options when \
