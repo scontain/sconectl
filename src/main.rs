@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use std::panic;
 use std::process;
 mod helpers;
-use helpers::{cmd, sanity};
+use helpers::{cmd, sanity,show_apply_help,get_apply_filename};
 mod config;
 use config::{extract_cas_config_dir_and_volume, get_kube_config_volume};
 
@@ -33,27 +33,19 @@ fn main() {
     }));
 
     let matches = cmd();
-    println!("{:?}", matches);
-    let mut apply_help = false;
+
+    let mut apply_help = show_apply_help(&matches);
     let mut apply_help_help = false;
     let show_spinner = matches.get_flag("quite");
     let mut apply_external: String = String::new();
     let mut apply_ext_args: Vec<&OsString> = Vec::new();
-    let apply_filname: String;
+    let apply_filname: String = get_apply_filename(&matches).unwrap();
     if let Some(sub_m) = matches.subcommand_matches("apply") {
-        if sub_m.get_count("help") == 1 {
-            apply_help = true;
-        }
-
         if sub_m.get_count("help") >= 2 {
             apply_help_help = true;
             println!("doulbe help {:?}", sub_m.get_count("help"));
         }
 
-        if let Some(f) = sub_m.get_one::<String>("filename") {
-            apply_filname = f.to_string();
-            println!("filename is {}", apply_filname);
-        }
         println!("{:?}", sub_m.subcommand());
 
         match sub_m.subcommand() {
@@ -118,10 +110,9 @@ fn main() {
     }
 
     if apply_help {
-        let mut docker_sconecli_d_cmd = format!(
-            r#"docker run -t --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" {image} apply --help"#
-        );
-        let o = execute_sh(docker_sconecli_d_cmd);
+        let o = execute_sh(format!(
+            r#"docker run -t --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm {image} apply --help"#
+        ));
         println!("{}", o);
         process::exit(0);
     }
@@ -135,15 +126,19 @@ fn main() {
     //     None
     // };
     //  docker run -d --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint=""
-    // --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":"/wd" -w "/wd" -v "$HOME/.cas":"/root/.cas"
-    // -v /home/vasyl/.kube/config:/root/.kube/config -e "SCONECTL_CAS_CONFIG=" -e "SCONECTL_REPO=registry.scontain.com/sconectl"
-    // -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" registry.scontain.com/sconectl/sconecli:latest
+    // --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":"/wd" -w "/wd"
+    // -e "SCONECTL_CAS_CONFIG=" -e "SCONECTL_REPO=registry.scontain.com/sconectl"
+    // -v "$HOME/.cas":"/root/.cas"
+    // -v  $HOME/.kube/config:/root/.kube/config
+    // -v "$HOME/.docker":"/root/.docker"
+    // -v "$HOME/.scone":"/root/.scone"
+    // registry.scontain.com/sconectl/sconecli:latest
     let mut docker_sconecli_d_cmd = format!(
         r#"docker run -d --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_REPO={repo}" {image} sleep 100000"#
     );
     let mut container_id = execute_sh(docker_sconecli_d_cmd);
 
-    // lets remove /n at the end
+    // lets remove /n at the end of the string
     container_id.pop();
 
     // docker exec $ID mkdir -p /root/.docker
@@ -162,8 +157,10 @@ fn main() {
     execute_sh(format!(
         r#"docker exec {container_id} ls -la /root/.docker"#
     ));
-    let mut dir = execute_sh(format!(r#"dirname $(realpath service.yaml)"#));
+    let dir = execute_sh(format!(r#"dirname $(realpath {apply_filname})"#));
     println!("{}", dir);
+    let bdir = execute_sh(format!(r#"basename {dir}"#));
+    println!("{}", bdir);
 
     // if let Some(mut sp) = stop {
     //     sp.stop_with_newline();
@@ -176,9 +173,9 @@ pub fn execute_sh(command: String) -> String {
 
     if code == 0 {
         // if verbose
-        println!("return code: {}", code);
-        eprintln!("stdout: {}", stdout);
-        eprintln!("stderr: {}", stderr);
+        // println!("return code: {}", code);
+        // eprintln!("stdout: {}", stdout);
+        // eprintln!("stderr: {}", stderr);
         stdout
     } else {
         println!("return code: {}", code);

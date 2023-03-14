@@ -106,6 +106,40 @@ pub fn cmd() -> ArgMatches {
     m
 }
 
+fn get_apply_matches(m: &ArgMatches) -> Option<&ArgMatches> {
+    match m.subcommand_matches("apply") {
+        Some(mm) => Some(mm),
+        None => None
+    }
+}
+
+pub fn show_apply_help(m: &ArgMatches) -> bool {
+    match get_apply_matches(m) {
+        Some(h) => {
+            if h.get_count("help") == 1 {
+                true
+            } else {
+                false
+            }
+        },
+        None => false
+    }     
+}
+
+pub fn get_apply_filename (m: &ArgMatches) -> Result<String, ()> {
+    match get_apply_matches(m) {
+        Some(mm) => {
+            match mm.get_one::<String>("filename") {
+                Some(f) => Ok(f.to_string()),
+                None => Err(())
+            } 
+        }
+        None => {
+            Err(())
+        }
+    } 
+}
+
 pub fn sanity() -> String {
     // do some sanity checking first
     if let Err(_e) = which("sh") {
