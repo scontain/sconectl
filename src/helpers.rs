@@ -2,6 +2,7 @@ use clap::ArgMatches;
 use colored::Colorize;
 
 use clap::{Arg, Command};
+use std::ffi::OsString;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -65,9 +66,22 @@ SUPPORT: If you need help, send an email to info@scontain.com with a description
 /// Note: `https://github.com/scontain/scone_mesh_tutorial/blob/main/check_prerequisites.sh` does some more sanity checking
 ///       Run the `check_prerequisites.sh` to check more dependencies
 
-pub fn cmd() -> ArgMatches {
-    let m = Command::new("sconectl")
+pub fn cmd() -> Box<Command> {
+    let c = Command::new("sconectl")
         .author("info@scontain.com")
+        .allow_external_subcommands(true)
+        .help_template("\
+{before-help}{name} {version}
+{author-with-newline}{about-with-newline}
+{usage-heading}
+sconectl [OPTIONS] [COMMAND]
+
+{all-args}
+
+COMMAND:
+  apply   apply manifest. Execute sconectl apply --help for more info.
+{after-help}
+")
         .version(env!("CARGO_PKG_VERSION"))
         .before_long_help(long_sconeclt_about)
         .arg(
@@ -90,55 +104,71 @@ pub fn cmd() -> ArgMatches {
                     option --quiet.",
                 ),
         )
-        .subcommand(
-            Command::new("apply")
-                .disable_help_flag(true)
-                .allow_external_subcommands(true)
-                .about("Controls configuration features")
-                .arg(Arg::new("help").long("help").action(clap::ArgAction::Count))
-                .arg(Arg::new("filename").short('f').help("Path to manifest")),
-        )
         .after_help(
             "Longer explanation to appear after the options when \
                  displaying the help information from --help or -h",
-        )
-        .get_matches();
-    m
+        );
+    Box::new(c)
 }
 
-fn get_apply_matches(m: &ArgMatches) -> Option<&ArgMatches> {
-    match m.subcommand_matches("apply") {
-        Some(mm) => Some(mm),
-        None => None
+fn cmd_matches(c: &Box<clap::Command>) -> ArgMatches {
+    let r = c.get_matches();
+    r
+}
+
+pub fn is_quite (c: Box<clap::Command>) -> bool {
+    cmd_matches(&c).get_flag("quite")
+}
+
+
+fn get_apply_args(mut command: Box<clap::Command>) -> String {
+
+    match cmd_matches(&command).subcommand() {
+        Some((external, ext_m)) => {
+            let mut apply_external: String = String::new();
+            let mut apply_ext_args: Vec<&OsString> = Vec::new();
+            let ext_args: Vec<_> = ext_m.get_many::<OsString>("").unwrap().collect();
+            apply_external = external.to_string();
+            apply_ext_args = ext_args;
+            println!("external {:?}", apply_external);
+            println!("external {:?}", apply_ext_args);
+
+            let mut ext_string: Vec<String> = Vec::new();
+            if apply_external != "apply" {
+                command.print_long_help();
+                process::exit(0x0101);
+            }
+            ext_string.push(apply_external.to_string());
+
+            if !apply_ext_args.is_empty() {
+                let mut vecs: Vec<String> = apply_ext_args
+                .iter()
+                .map(|s| s.to_string_lossy().to_string())
+                .collect();
+                ext_string.append(&mut vecs);
+                ext_string.join(" ")
+            } else {
+                ext_string.join(" ")
+            }
+        }
+        _ => "".to_owned()
     }
 }
 
-pub fn show_apply_help(m: &ArgMatches) -> bool {
-    match get_apply_matches(m) {
-        Some(h) => {
-            if h.get_count("help") == 1 {
-                true
-            } else {
-                false
-            }
-        },
-        None => false
-    }     
-}
 
-pub fn get_apply_filename (m: &ArgMatches) -> Result<String, ()> {
-    match get_apply_matches(m) {
-        Some(mm) => {
-            match mm.get_one::<String>("filename") {
-                Some(f) => Ok(f.to_string()),
-                None => Err(())
-            } 
-        }
-        None => {
-            Err(())
-        }
-    } 
-}
+// pub fn get_apply_filename (m: &ArgMatches) -> Result<String, ()> {
+//     match get_apply_matches(m) {
+//         Some(mm) => {
+//             match mm.get_one::<String>("filename") {
+//                 Some(f) => Ok(f.to_string()),
+//                 None => Err(())
+//             } 
+//         }
+//         None => {
+//             Err(())
+//         }
+//     } 
+// }
 
 pub fn sanity() -> String {
     // do some sanity checking first

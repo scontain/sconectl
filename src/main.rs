@@ -2,11 +2,10 @@ use colored::Colorize;
 use shells::sh;
 use spinners::{Spinner, Spinners};
 use std::env;
-use std::ffi::OsString;
 use std::panic;
 use std::process;
 mod helpers;
-use helpers::{cmd, sanity,show_apply_help,get_apply_filename};
+use helpers::{cmd, sanity, is_quite};
 mod config;
 use config::{extract_cas_config_dir_and_volume, get_kube_config_volume};
 
@@ -32,46 +31,15 @@ fn main() {
         process::exit(1);
     }));
 
-    let matches = cmd();
-
-    let mut apply_help = show_apply_help(&matches);
+    let mut command = cmd();
+    // let mut apply_help = show_apply_help(&matches);
     let mut apply_help_help = false;
-    let show_spinner = matches.get_flag("quite");
-    let mut apply_external: String = String::new();
-    let mut apply_ext_args: Vec<&OsString> = Vec::new();
-    let apply_filname: String = get_apply_filename(&matches).unwrap();
-    if let Some(sub_m) = matches.subcommand_matches("apply") {
-        if sub_m.get_count("help") >= 2 {
-            apply_help_help = true;
-            println!("doulbe help {:?}", sub_m.get_count("help"));
-        }
+    let show_spinner = is_quite(command);
+    // TODO APPLY ARGS
+    // let apply_filname: String = get_apply_filename(&matches).unwrap();
+    
 
-        println!("{:?}", sub_m.subcommand());
 
-        match sub_m.subcommand() {
-            Some((external, ext_m)) => {
-                let ext_args: Vec<_> = ext_m.get_many::<OsString>("").unwrap().collect();
-                apply_external = external.to_string();
-                apply_ext_args = ext_args;
-                println!("external {:?}", apply_external);
-                println!("external {:?}", apply_ext_args);
-            }
-            _ => {}
-        }
-    }
-    let mut ext_string: Vec<String> = Vec::new();
-    ext_string.push(apply_external.to_string());
-    if !apply_ext_args.is_empty() {
-        let mut vecs: Vec<String> = apply_ext_args
-            .iter()
-            .map(|s| s.to_string_lossy().to_string())
-            .collect();
-        ext_string.append(&mut vecs);
-    }
-
-    let apply_args = ext_string.join(" ");
-
-    println!("args {:}", apply_args);
 
     let vol = sanity();
     let kubeconfig_vol = get_kube_config_volume();
@@ -107,14 +75,6 @@ fn main() {
                 eprintln!("\n{} 'docker pull {image}'! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)", "Failed to".red());
             }
         }
-    }
-
-    if apply_help {
-        let o = execute_sh(format!(
-            r#"docker run -t --platform linux/amd64 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm {image} apply --help"#
-        ));
-        println!("{}", o);
-        process::exit(0);
     }
 
     // let stop = if show_spinner {
@@ -157,10 +117,10 @@ fn main() {
     execute_sh(format!(
         r#"docker exec {container_id} ls -la /root/.docker"#
     ));
-    let dir = execute_sh(format!(r#"dirname $(realpath {apply_filname})"#));
-    println!("{}", dir);
-    let bdir = execute_sh(format!(r#"basename {dir}"#));
-    println!("{}", bdir);
+    // let dir = execute_sh(format!(r#"dirname $(realpath {apply_filname})"#));
+    // println!("{}", dir);
+    // let bdir = execute_sh(format!(r#"basename {dir}"#));
+    // println!("{}", bdir);
 
     // if let Some(mut sp) = stop {
     //     sp.stop_with_newline();
