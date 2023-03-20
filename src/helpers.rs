@@ -156,12 +156,15 @@ pub fn sanity() -> String {
             if val.starts_with("unix://") {
                 let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();
                 format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#)
-            } else if val.starts_with("tcp://") || val.starts_with(&docker0_ip) {
-                if !docker0_if_exist {
-                    eprintln!("Interface 'docker0' was not found but docker socket with TCP schema was detected.");
-                }
-                eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={val} to access docker socket inside container." );
+            } else if val.starts_with("tcp://") {
+                eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={val} to access docker socket inside container.");
                 format!(r#"-e DOCKER_HOST="{val}""#)
+            } else if val.starts_with(&docker0_ip) {
+                if !docker0_if_exist {
+                    eprintln!("Interface 'docker0' was not found but docker socket with TCP schema was detected. Will use default docker network 172.17.0.1.");
+                }
+                eprintln!("IP address was detected. Will use DOCKER_HOST=tcp://{docker0_ip} to access docker socket inside container.");
+                format!(r#"-e DOCKER_HOST="tcp://{docker0_ip}""#)
             } else {
                 eprintln!("Docker socket: {val} with unknown schema was detected.");
                 r#"-e DOCKER_HOST=/var/run/docker.sock -v /var/run/docker.sock:/var/run/docker.sock"#.to_string()
