@@ -22,5 +22,3 @@ spinners = "4.1.0"
 termimad = "0.14"
 get_if_addrs = "0.5.3"
 log = "*"
-
-log = "*"
