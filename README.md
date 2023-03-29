@@ -101,7 +101,7 @@ ENVIRONMENT:
 
 
   SCONECTL_NOPULL
-           By default, sconectl pulls the CLI image sconecli:latest first. If this environment 
+           By default, sconectl pulls the CLI image sconecli:$VERSION first. If this environment 
            variable is defined, sconectl does not pull the image. 
 
   SCONECTL_CAS_CONFIG

@@ -1,6 +1,7 @@
 !#/bin/bash
 
 set -e
+export VERSION=${VERSION:-latest}
 
 echo "- Building sconectl"
 

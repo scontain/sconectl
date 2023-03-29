@@ -1,6 +1,6 @@
 [package]
 name = "sconectl"
-version = "0.2.19"
+version = "0.2.20"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 keywords = ["SCONE", "confidential"]
@@ -21,4 +21,6 @@ shells = "0.2.0"
 spinners = "4.1.0"
 termimad = "0.14"
 get_if_addrs = "0.5.3"
+log = "*"
+
 log = "*"

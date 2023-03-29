@@ -1,7 +1,9 @@
 use colored::Colorize;
+use log::warn;
 
 use std::env;
 use std::fs;
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
 use std::process;
 use which::which;
@@ -12,7 +14,7 @@ pub fn help(msg: &str) -> ! {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
     eprintln!(
-        "sconectl [COMMAND] [OPTIONS]
+        r#"sconectl [COMMAND] [OPTIONS]
 
 sconectl helps to transform cloud-native applications into cloud-confidential applications. It supports converting native services into confidential services and services meshes into confidential service meshes. 
 
@@ -54,7 +56,7 @@ ENVIRONMENT:
 
 
   SCONECTL_NOPULL
-           By default, sconectl pulls the CLI image sconecli:latest first. If this environment 
+           By default, sconectl pulls the CLI image sconecli:$VERSION first. If this environment 
            variable is defined, sconectl does not pull the image. 
 
   SCONECTL_CAS_CONFIG
@@ -79,10 +81,14 @@ ENVIRONMENT:
            One can overwrite this default with the help of this environment variable. For
            example, you might want to overwrite this in case you are using podman. 
 
+  VERSION
+           Set the version of the sconecli image. Default is "latest"
+
 SUPPORT: If you need help, send an email to info@scontain.com with a description of the
          issue. Ideally, with a log that shows the problem.
 
-VERSION: sconectl {VERSION}" );
+VERSION: sconectl {VERSION}"#
+    );
     if !msg.is_empty() {
         eprintln!("ERROR: {}", msg.red());
         process::exit(0x0101);
@@ -140,17 +146,6 @@ pub fn sanity() -> String {
         }
     }
 
-    // 172.17.0.0 is default docker network
-    let mut docker0_ip = String::from("172.17.0.1");
-    let mut docker0_if_exist = false;
-    for iface in get_if_addrs::get_if_addrs().unwrap() {
-        if iface.name == "docker0" {
-            docker0_if_exist = true;
-            docker0_ip = iface.ip().to_string();
-            break;
-        }
-    }
-
     let vol = match env::var("DOCKER_HOST") {
         Ok(val) => {
             if val.starts_with("unix://") {
@@ -159,12 +154,15 @@ pub fn sanity() -> String {
             } else if val.starts_with("tcp://") {
                 eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={val} to access docker socket inside container.");
                 format!(r#"-e DOCKER_HOST="{val}""#)
-            } else if val.starts_with(&docker0_ip) {
-                if !docker0_if_exist {
-                    eprintln!("Interface 'docker0' was not found but docker socket with TCP schema was detected. Will use default docker network 172.17.0.1.");
-                }
-                eprintln!("IP address was detected. Will use DOCKER_HOST=tcp://{docker0_ip} to access docker socket inside container.");
-                format!(r#"-e DOCKER_HOST="tcp://{docker0_ip}""#)
+            } else if match val.parse::<Ipv4Addr>() {
+                Ok(_sock) => true,
+                _ => false,
+            } || match val.parse::<SocketAddrV4>() {
+                Ok(_sock) => true,
+                _ => false,
+            } {
+                warn!("IP address was detected. Will use DOCKER_HOST=tcp://{val} to access docker socket inside container.");
+                format!(r#"-e DOCKER_HOST="tcp://{val}""#)
             } else {
                 eprintln!("Docker socket: {val} with unknown schema was detected.");
                 r#"-e DOCKER_HOST=/var/run/docker.sock -v /var/run/docker.sock:/var/run/docker.sock"#.to_string()
