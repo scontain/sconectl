@@ -47,9 +47,13 @@ fn main() {
         Ok(repo) => repo,
         Err(_err) => "registry.scontain.com/sconectl".to_string(),
     };
-    let version = match env::var("VERSION") {
+    let mut version = match env::var("VERSION") {
         Ok(version) => version,
         Err(_err) => "latest".to_string(),
+    };
+    version = match env::var("SCONECTL_VERSION") {
+        Ok(sconectl_version) => sconectl_version,
+        Err(_err) => version,
     };
 
     let image = format!("{repo}/sconecli:{version}");

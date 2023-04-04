@@ -84,10 +84,15 @@ ENVIRONMENT:
   VERSION
            Set the version of the sconecli image. Default is "latest"
 
-SUPPORT: If you need help, send an email to info@scontain.com with a description of the
-         issue. Ideally, with a log that shows the problem.
+  SCONECTL_VERSION
+           In case you already use environment variable VERSION, you can use 
+           SCONECTL_VERSION instead. Default is "latest" and it has priority over VERSION.
 
-VERSION: sconectl {VERSION}"#
+
+sconectl version {VERSION}
+   If you need help, send an email to info@scontain.com with a description of the issue. 
+   Ideally, add a log that has sufficient information to reproduce the issue.
+"#
     );
     if !msg.is_empty() {
         eprintln!("ERROR: {}", msg.red());
