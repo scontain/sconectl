@@ -10,14 +10,14 @@ pub fn get_kube_config_volume() -> String {
         // if KUBECONFIG is not set, let us try the default path
         Err(_err) => {
             let home = match env::var("HOME") {
-                Ok(val) => val,
+                Ok(value) => value,
                 Err(_e) => help("environment variable HOME not defined. (Error 12874-23995-6201)"),
             };
             let path = format!("{home}/.kube/config");
             if Path::new(&path).exists() {
                 path
             } else {
-                "".to_owned()
+                String::new()
             }
         }
     };
@@ -27,7 +27,7 @@ pub fn get_kube_config_volume() -> String {
 pub fn get_cas_config_dir_env() -> String {
     match env::var("SCONECTL_CAS_CONFIG") {
         Ok(value) => value,
-        Err(_err) => "".to_owned(),
+        Err(_err) => String::new(),
     }
 }
 
@@ -59,7 +59,7 @@ pub fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, 
 
     if cas_config_dir.is_empty() {
         (
-            String::from(""),
+            String::new(),
             String::from("-v \"$HOME/.cas\":\"/root/.cas\""),
             new_args.to_vec(),
         )

@@ -117,7 +117,7 @@ pub fn sanity() -> String {
         help("Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/ (Error 21214-27681-19217)")
     }
     let home = match env::var("HOME") {
-        Ok(val) => val,
+        Ok(value) => value,
         Err(_e) => help("environment variable HOME not defined. (Error 25873-23261-18708)"),
     };
     let path = format!("{home}/.docker");
@@ -127,8 +127,8 @@ pub fn sanity() -> String {
             Ok(config_content) => {
                 match serde_json::from_str::<serde_json::value::Value>(&config_content) {
                     Err(_e) => { eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 8870-21168-30218)"); serde_json::from_str("{}").expect("Docker config file seems to be garbled (Error 15572-27738-16119)") },
-                    Ok(val)  => {
-                        match val["credsStore"].as_str() {
+                    Ok(value)  => {
+                        match value["credsStore"].as_str() {
                             None => {}, // ok
                             Some(value) => { if !value.is_empty() { eprintln!("{}", r#"ERROR: command execution will most likely fail. Please set field 'credsStore'" in file '~/.docker/config.json' to "" (Error 8352-13006-22294)"#.red()) } },
                         }
@@ -152,24 +152,20 @@ pub fn sanity() -> String {
     }
 
     let vol = match env::var("DOCKER_HOST") {
-        Ok(val) => {
-            if val.starts_with("unix://") {
-                let vol = val.strip_prefix("unix://").unwrap_or(&val).to_string();
-                format!(r#"-e DOCKER_HOST="{val}" -v "{vol}":"{vol}""#)
-            } else if val.starts_with("tcp://") {
-                eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={val} to access docker socket inside container.");
-                format!(r#"-e DOCKER_HOST="{val}""#)
-            } else if match val.parse::<Ipv4Addr>() {
-                Ok(_sock) => true,
-                _ => false,
-            } || match val.parse::<SocketAddrV4>() {
-                Ok(_sock) => true,
-                _ => false,
-            } {
-                warn!("IP address was detected. Will use DOCKER_HOST=tcp://{val} to access docker socket inside container.");
-                format!(r#"-e DOCKER_HOST="tcp://{val}""#)
+        Ok(value) => {
+            if value.starts_with("unix://") {
+                let vol = value.strip_prefix("unix://").unwrap_or(&value).to_string();
+                format!(r#"-e DOCKER_HOST="{value}" -v "{vol}":"{vol}""#)
+            } else if value.starts_with("tcp://") {
+                eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={value} to access docker socket inside container.");
+                format!(r#"-e DOCKER_HOST="{value}""#)
+            } else if matches!(value.parse::<Ipv4Addr>(), Ok(_sock))
+                || matches!(value.parse::<SocketAddrV4>(), Ok(_sock))
+            {
+                warn!("IP address was detected. Will use DOCKER_HOST=tcp://{value} to access docker socket inside container.");
+                format!(r#"-e DOCKER_HOST="tcp://{value}""#)
             } else {
-                eprintln!("Docker socket: {val} with unknown schema was detected.");
+                eprintln!("Docker socket: {value} with unknown schema was detected.");
                 r#"-e DOCKER_HOST=/var/run/docker.sock -v /var/run/docker.sock:/var/run/docker.sock"#.to_string()
             }
         }
