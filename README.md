@@ -1,11 +1,22 @@
 # sconectl
 
-`sconectl` helps to transform cloud-native applications into cloud-confidential applications. It
-supports to transform native services into confidential services and services meshes into confidential service meshes.
+[`sconectl`](https://sconedocs.github.io/scone_mesh_tutorial/) helps to transform cloud-native applications into cloud-confidential applications. It
+supports transforming native services into confidential services and services meshes into confidential service meshes.
 
 `sconectl` is a program that runs on your development machine and executes `scone` commands in containers: [`scone`](https://sconedocs.github.io/) is a platform to convert native applications into confidential applications.
 
 We implemented this as as a Rust crate. Alternatively, you can define an `alias` for your shell (see below).
+
+## Relation to `sconify-image`
+
+`sconectl` complements [`sconify_image`](https://sconedocs.github.io/ee_sconify_image/). Actually, `sconectl` includes a wrapper for `sconify_image`: we can declare the arguments of `sconify_image` with the help of one or more **yaml** files.
+
+### Building confidential applications:
+
+- `sconify_image` helps to build confidential services that are deployed with the help of a single container image.
+- `sconectl` focuses on generating images for cloud-native services that are connected in a service mesh. The generation is declared with the help of *service files* (see below).
+
+- `sconectl` can  connect the services within an application with the help of a *mesh file* (see below)
 
 ## Examples
 
@@ -41,7 +52,6 @@ cargo install sconectl
 
 `sconectl` requires access to container images. For now, you would need to register an account at our [gitlab](https://gitlab.scontain.com/).
 
-
 ## Podman support
 
 Our focus is to support `podman` instead of `docker` (legacy). To ensure that we can run both with `docker` as well as `podman`, we use the Docker API for now. After starting `podman`, please set the environment variable `DOCKER_HOST` as instructed by `podman`.
@@ -58,7 +68,7 @@ cargo publish
 
 ## CLI Reference
 
-```
+```text
 sconectl [COMMAND] [OPTIONS]
 
 sconectl helps to transform cloud-native applications into cloud-confidential applications. It supports converting native services into confidential services and services meshes into confidential service meshes. 
