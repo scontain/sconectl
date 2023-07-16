@@ -1,6 +1,6 @@
 [package]
 name = "sconectl"
-version = "5.8.4"
+version = "5.8.5"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 keywords = ["SCONE", "confidential"]
