@@ -118,7 +118,9 @@ pub fn sanity() -> String {
     }
     let home = match env::var("HOME") {
         Ok(value) => value,
-        Err(_e) => help("environment variable HOME not defined. (Error 25873-23261-18708)"),
+        Err(_e) => help(
+            "environment variable HOME not defined. Please define HOME. (Error 25873-23261-18708)",
+        ),
     };
     let path = format!("{home}/.docker");
     if Path::new(&path).exists() {
@@ -135,7 +137,7 @@ pub fn sanity() -> String {
                     },
                 }
             },
-            Err(_err) => eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 22852-10923-23603)"),
+            Err(_err) => eprintln!("Warning: Failed to read Docker config file from location {path}. In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 22852-10923-23603)"),
         }
     } else {
         eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman. (Warning 22414-7450-14297)");
