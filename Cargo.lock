@@ -136,7 +136,7 @@ checksum = "e86697c916019a8588c99b5fac3cead74ec0b4b819707a682fd4d23fa0ce1ba1"
 
 [[package]]
 name = "sconectl"
-version = "5.8.5"
+version = "5.8.6"
 dependencies = [
  "colored",
  "log",

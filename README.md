@@ -52,11 +52,10 @@ cargo install sconectl
 
 `sconectl` requires access to container images. For now, you would need to register an account at our [gitlab](https://gitlab.scontain.com/).
 
-## Podman support
-
-Our focus is to support `podman` instead of `docker` (legacy). To ensure that we can run both with `docker` as well as `podman`, we use the Docker API for now. After starting `podman`, please set the environment variable `DOCKER_HOST` as instructed by `podman`.
+## `DOCKER_HOST`
 
 `sconectl` will use `DOCKER_HOST` as the socket. If not set, it will use the default docker socket for now, i.e., `/var/run/docker.sock`.
+You can connect to the docker 
 
 ## Publish a new version
 
