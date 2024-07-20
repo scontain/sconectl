@@ -125,7 +125,7 @@ pub fn sanity() -> String {
     let path = format!("{home}/.docker");
     if Path::new(&path).exists() {
         let path = format!("{home}/.docker/config.json");
-        match fs::read_to_string(path) {
+        match fs::read_to_string(path.clone()) {
             Ok(config_content) => {
                 match serde_json::from_str::<serde_json::value::Value>(&config_content) {
                     Err(_e) => { eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 8870-21168-30218)"); serde_json::from_str("{}").expect("Docker config file seems to be garbled (Error 15572-27738-16119)") },
