@@ -105,7 +105,8 @@ sconectl version {VERSION}
 /// - check that all commands exists
 /// - check that all required directories exist
 /// - check that docker socket exists
-/// Note: `https://github.com/scontain/scone_mesh_tutorial/blob/main/check_prerequisites.sh` does some more sanity checking
+///
+///  Note: `https://github.com/scontain/scone_mesh_tutorial/blob/main/check_prerequisites.sh` does some more sanity checking
 ///       Run the `check_prerequisites.sh` to check more dependencies
 
 pub fn sanity() -> String {
