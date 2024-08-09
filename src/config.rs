@@ -25,10 +25,7 @@ pub fn get_kube_config_volume() -> String {
 }
 
 pub fn get_cas_config_dir_env() -> String {
-    match env::var("SCONECTL_CAS_CONFIG") {
-        Ok(value) => value,
-        Err(_err) => String::new(),
-    }
+    env::var("SCONECTL_CAS_CONFIG").unwrap_or_default()
 }
 
 pub fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, Vec<String>) {
