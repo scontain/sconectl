@@ -9,7 +9,6 @@ use std::process;
 use which::which;
 
 /// prints a help message. If `msg` is not empty, prints also the message in red.
-
 pub fn help(msg: &str) -> ! {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -108,14 +107,15 @@ sconectl version {VERSION}
 ///
 ///  Note: `https://github.com/scontain/scone_mesh_tutorial/blob/main/check_prerequisites.sh` does some more sanity checking
 ///       Run the `check_prerequisites.sh` to check more dependencies
-
 pub fn sanity() -> String {
     // do some sanity checking first
     if let Err(_e) = which("sh") {
         help("Shell `sh` not installed. Please install! (Error 4497-4397-12312)")
     }
     if let Err(_e) = which("docker") {
-        help("Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/ (Error 21214-27681-19217)")
+        help(
+            "Docker CLI (i.e. command `docker`) is not installed. Please install - see https://docs.docker.com/get-docker/ (Error 21214-27681-19217)",
+        )
     }
     let home = match env::var("HOME") {
         Ok(value) => value,
@@ -129,19 +129,34 @@ pub fn sanity() -> String {
         match fs::read_to_string(path.clone()) {
             Ok(config_content) => {
                 match serde_json::from_str::<serde_json::value::Value>(&config_content) {
-                    Err(_e) => { eprintln!("Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 8870-21168-30218)"); serde_json::from_str("{}").expect("Docker config file seems to be garbled (Error 15572-27738-16119)") },
-                    Ok(value)  => {
+                    Err(_e) => {
+                        eprintln!(
+                            "Warning: In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 8870-21168-30218)"
+                        );
+                        serde_json::from_str("{}").expect(
+                            "Docker config file seems to be garbled (Error 15572-27738-16119)",
+                        )
+                    }
+                    Ok(value) => {
                         match value["credsStore"].as_str() {
-                            None => {}, // ok
-                            Some(value) => { if !value.is_empty() { eprintln!("{}", r#"ERROR: command execution will most likely fail. Please set field 'credsStore'" in file '~/.docker/config.json' to "" (Error 8352-13006-22294)"#.red()) } },
+                            None => {} // ok
+                            Some(value) => {
+                                if !value.is_empty() {
+                                    eprintln!("{}", r#"ERROR: command execution will most likely fail. Please set field 'credsStore'" in file '~/.docker/config.json' to "" (Error 8352-13006-22294)"#.red())
+                                }
+                            }
                         }
-                    },
+                    }
                 }
-            },
-            Err(_err) => eprintln!("Warning: Failed to read Docker config file from location {path}. In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 22852-10923-23603)"),
+            }
+            Err(_err) => eprintln!(
+                "Warning: Failed to read Docker config file from location {path}. In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 22852-10923-23603)"
+            ),
         }
     } else {
-        eprintln!("Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman. (Warning 22414-7450-14297)");
+        eprintln!(
+            "Warning: $HOME/.docker (={path}) does not exist! Maybe try `docker` command on command line first or create directory manually in case you are using podman. (Warning 22414-7450-14297)"
+        );
     }
 
     let path = format!("{home}/.scone");
@@ -160,12 +175,16 @@ pub fn sanity() -> String {
                 let vol = value.strip_prefix("unix://").unwrap_or(&value).to_string();
                 format!(r#"-e DOCKER_HOST="{value}" -v "{vol}":"{vol}""#)
             } else if value.starts_with("tcp://") {
-                eprintln!("Docker socket with TCP schema was detected. Will use DOCKER_HOST={value} to access docker socket inside container.");
+                eprintln!(
+                    "Docker socket with TCP schema was detected. Will use DOCKER_HOST={value} to access docker socket inside container."
+                );
                 format!(r#"-e DOCKER_HOST="{value}""#)
             } else if matches!(value.parse::<Ipv4Addr>(), Ok(_sock))
                 || matches!(value.parse::<SocketAddrV4>(), Ok(_sock))
             {
-                warn!("IP address was detected. Will use DOCKER_HOST=tcp://{value} to access docker socket inside container.");
+                warn!(
+                    "IP address was detected. Will use DOCKER_HOST=tcp://{value} to access docker socket inside container."
+                );
                 format!(r#"-e DOCKER_HOST="tcp://{value}""#)
             } else {
                 eprintln!("Docker socket: {value} with unknown schema was detected.");

@@ -16,7 +16,6 @@ const DOCKER_NETWORK: &str = ""; // --network=host
 /// sconectl helps to transform cloud-native applications into cloud-confidential applications.
 /// It supports to transform native services into confidential services and services meshes
 /// into confidential service meshes.
-
 fn main() {
     panic::set_hook(Box::new(|panic_info| {
         if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
@@ -58,7 +57,6 @@ fn main() {
 
     let image = format!("{repo}/sconecli:{version}");
 
-
     let mut s = format!(
         r#"docker run  {DOCKER_NETWORK} --platform linux/amd64 -e SCONE_PRODUCTION=0 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_PWD=$PWD" -e "SCONECTL_HOME=$HOME" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/home/root/.docker" -v "$HOME/.scone":"/home/root/.scone" -v "$PWD":"/wd" -w "/wd" --user $(id -u):$(id -g) --group-add $(getent group docker | cut -d: -f3) {image}"#
     );
@@ -93,7 +91,10 @@ fn main() {
                 sp.stop_with_newline();
             }
             if code != 0 {
-                eprintln!("\n{} 'docker pull {image}'! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)", "Failed to".red());
+                eprintln!(
+                    "\n{} 'docker pull {image}'! Do you have access rights? Please check and send email to info@scontain.com if you need access. (Error 24501-25270-6605)",
+                    "Failed to".red()
+                );
             }
         }
     }
@@ -115,7 +116,12 @@ fn main() {
         sp.stop_with_newline();
     }
     if !status.success() {
-        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed! {s}".red(), args[command_index].blue(), status);
+        eprintln!(
+            "{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)",
+            "Execution failed! {s}".red(),
+            args[command_index].blue(),
+            status
+        );
         process::exit(0x0101);
     } else {
         println!();
