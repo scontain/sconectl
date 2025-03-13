@@ -60,7 +60,7 @@ fn main() {
 
 
     let mut s = format!(
-        r#"docker run  {DOCKER_NETWORK} --platform linux/amd64 -e SCONE_PRODUCTION=0 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_PWD=$PWD" -e "SCONECTL_HOME=$HOME" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/root/.docker" -v "$HOME/.scone":"/root/.scone" -v "$PWD":"/wd" -w "/wd" {image}"#
+        r#"docker run  {DOCKER_NETWORK} --platform linux/amd64 -e SCONE_PRODUCTION=0 -e SCONE_NO_TIME_THREAD=1 --entrypoint="" --rm {vol} {cas_config_dir_vol} {kubeconfig_vol} -e "SCONECTL_CAS_CONFIG={cas_config_dir_env}" -e "SCONECTL_PWD=$PWD" -e "SCONECTL_HOME=$HOME" -e "SCONECTL_REPO={repo}" -v "$HOME/.docker":"/home/root/.docker" -v "$HOME/.scone":"/home/root/.scone" -v "$PWD":"/wd" -w "/wd" --user $(id -u):$(id -g) --group-add $(getent group docker | cut -d: -f3) {image}"#
     );
     for (i, arg) in args.iter().enumerate().skip(1) {
         if arg == "--help" && i == 1 {
@@ -115,7 +115,7 @@ fn main() {
         sp.stop_with_newline();
     }
     if !status.success() {
-        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed!".red(), args[command_index].blue(), status);
+        eprintln!("{} See messages above. Command {} returned error.\n  Error={:?} (Error 22597-24820-10449)", "Execution failed! {s}".red(), args[command_index].blue(), status);
         process::exit(0x0101);
     } else {
         println!();

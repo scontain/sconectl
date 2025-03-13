@@ -1,7 +1,7 @@
 [package]
 name = "sconectl"
-version = "5.9.0"
-edition = "2021"
+version = "5.9.1"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 keywords = ["SCONE", "confidential"]
 categories = ["command-line-utilities", "development-tools"]
@@ -14,8 +14,8 @@ description = "sconectl helps to transform cloud-native applications into cloud-
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-colored = "2.0.0"
-which = "4.2.5"
+colored = "3.0.0"
+which = "7.0.2"
 serde_json = "1.0.81"
 shells = "0.2.0"
 spinners = "4.1.0"

@@ -21,7 +21,7 @@ pub fn get_kube_config_volume() -> String {
             }
         }
     };
-    format!("-v {kubeconfig_path}:/root/.kube/config") // kubeconfig_path
+    format!("-v {kubeconfig_path}:/home/root/.kube/config") // kubeconfig_path
 }
 
 pub fn get_cas_config_dir_env() -> String {
@@ -57,7 +57,7 @@ pub fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, 
     if cas_config_dir.is_empty() {
         (
             String::new(),
-            String::from("-v \"$HOME/.cas\":\"/root/.cas\""),
+            String::from("-v \"$HOME/.cas\":\"/home/root/.cas\""),
             new_args.to_vec(),
         )
     } else {
@@ -77,7 +77,7 @@ pub fn extract_cas_config_dir_and_volume(args: Vec<String>) -> (String, String, 
         }
         (
             cas_config_dir.to_owned(),
-            format!("-v \"{cas_config_dir}\":\"/root/.cas\""),
+            format!("-v \"{cas_config_dir}\":\"/home/root/.cas\""),
             new_args.to_vec(),
         )
     }

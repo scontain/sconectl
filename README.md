@@ -1,22 +1,29 @@
-# sconectl
+# `sconectl`
 
-[`sconectl`](https://sconedocs.github.io/scone_mesh_tutorial/) helps to transform cloud-native applications into cloud-confidential applications. It
-supports transforming native services into confidential services and services meshes into confidential service meshes.
+## What is `sconectl`
 
-`sconectl` is a program that runs on your development machine and executes `scone` commands in containers: [`scone`](https://sconedocs.github.io/) is a platform to convert native applications into confidential applications.
+`sconectl` is a tool to transform cloud-native applications into cloud-confidential applications. 
 
-We implemented this as as a Rust crate. Alternatively, you can define an `alias` for your shell (see below).
+`sconectl` can 
 
-## Relation to `sconify-image`
+- transform native services into confidential services,  and 
+- services meshes into confidential service meshes.
 
-`sconectl` complements [`sconify_image`](https://sconedocs.github.io/ee_sconify_image/). Actually, `sconectl` includes a wrapper for `sconify_image`: we can declare the arguments of `sconify_image` with the help of one or more **yaml** files.
+## Where to execute `sconectl`
 
-### Building confidential applications:
+`sconectl` is a program that runs on your development machine and executes `scone` CLI commands in containers. For more details, see [`scone`](https://sconedocs.github.io/). 
 
-- `sconify_image` helps to build confidential services that are deployed with the help of a single container image.
-- `sconectl` focuses on generating images for cloud-native services that are connected in a service mesh. The generation is declared with the help of *service files* (see below).
+Existing (native) executable can be transformed into confidential executable with the help of CLI `scone-signer` command we can convert native executable into a confidential applications.
 
-- `sconectl` can  connect the services within an application with the help of a *mesh file* (see below)
+## What platforms / CPUs are supported by `sconectl`?
+
+- `sconectl` should run on any platform that supports Rust. It executes the `scone` CLI in containers.  We implemented `sconectl` in Rust. Alternatively, you can define an `alias` for your shell (see below).
+
+- While `scone` have been built for Intel SGX, the newest version also supports Intel TDX and AMD SEV-SNP. The 
+
+
+**NOTE:** The `scone` CLI uses modern x86-64 CPU instructions. Running on ARM CPUs, not all x86-64  instructions are emulated. Hence, `scone` CLI command will fail if essential instructions like  (e.g., `rdrand`) are not available. 
+
 
 ## Examples
 
@@ -52,22 +59,10 @@ cargo install sconectl
 
 `sconectl` requires access to container images. For now, you would need to register an account at our [gitlab](https://gitlab.scontain.com/).
 
-## `DOCKER_HOST`
-
-`sconectl` will use `DOCKER_HOST` as the socket. If not set, it will use the default docker socket for now, i.e., `/var/run/docker.sock`.
-You can connect to the docker 
-
-## Publish a new version
-
-To publish a new `sconectl` version, ensure that all your changes are committed and pushed. Then executed:
-
-```bash
-cargo publish
-```
 
 ## CLI Reference
 
-```text
+```
 sconectl [COMMAND] [OPTIONS]
 
 sconectl helps to transform cloud-native applications into cloud-confidential applications. It supports converting native services into confidential services and services meshes into confidential service meshes. 
@@ -135,8 +130,16 @@ ENVIRONMENT:
            One can overwrite this default with the help of this environment variable. For
            example, you might want to overwrite this in case you are using podman. 
 
-SUPPORT: If you need help, send an email to info@scontain.com with a description of the
-         issue. Ideally, with a log that shows the problem.
+  VERSION
+           Set the version of the sconecli image. Default is "latest"
 
-VERSION: sconectl 0.2.17
+  SCONECTL_VERSION
+           In case you already use environment variable VERSION, you can use 
+           SCONECTL_VERSION instead. Default is "latest" and it has priority over VERSION.
+
+
+sconectl version 5.9.0
+   If you need help, send an email to info@scontain.com with a description of the issue. 
+   Ideally, add a log that has sufficient information to reproduce the issue.
+
 ```

@@ -1,11 +1,29 @@
-# sconectl
+# `sconectl`
 
-`sconectl` helps to transform cloud-native applications into cloud-confidential applications. It
-supports to transform native services into confidential services and services meshes into confidential service meshes.
+## What is `sconectl`
 
-`sconectl` is a program that runs on your development machine and executes `scone` commands in containers: [`scone`](https://sconedocs.github.io/) is a platform to convert native applications into confidential applications.
+`sconectl` is a tool to transform cloud-native applications into cloud-confidential applications.
 
-We implemented this as as a Rust crate. Alternatively, you can define an `alias` for your shell (see below).
+`sconectl` can
+
+- transform native services into confidential services,  and
+- services meshes into confidential service meshes.
+
+## Where to execute `sconectl`
+
+`sconectl` is a program that runs on your development machine and executes `scone` CLI commands in containers. For more details, see [`scone`](https://sconedocs.github.io/). 
+
+Existing (native) executable can be transformed into confidential executable with the help of CLI `scone-signer` command we can convert native executable into a confidential applications.
+
+## What platforms / CPUs are supported by `sconectl`?
+
+- `sconectl` should run on any platform that supports Rust. It executes the `scone` CLI in containers.  We implemented `sconectl` in Rust. Alternatively, you can define an `alias` for your shell (see below).
+
+- While `scone` have been built for Intel SGX, the newest version also supports Intel TDX and AMD SEV-SNP.
+
+
+**NOTE:** The `scone` CLI uses modern x86-64 CPU instructions. Running on ARM CPUs, not all x86-64  instructions are emulated. Hence, `scone` CLI command will fail if essential instructions like  (e.g., `rdrand`) are not available. 
+
 
 ## Examples
 
@@ -41,20 +59,6 @@ cargo install sconectl
 
 `sconectl` requires access to container images. For now, you would need to register an account at our [gitlab](https://gitlab.scontain.com/).
 
-
-## Podman support
-
-Our focus is to support `podman` instead of `docker` (legacy). To ensure that we can run both with `docker` as well as `podman`, we use the Docker API for now. After starting `podman`, please set the environment variable `DOCKER_HOST` as instructed by `podman`.
-
-`sconectl` will use `DOCKER_HOST` as the socket. If not set, it will use the default docker socket for now, i.e., `/var/run/docker.sock`.
-
-## Publish a new version
-
-To publish a new `sconectl` version, ensure that all your changes are committed and pushed. Then executed:
-
-```bash
-cargo publish
-```
 
 ## CLI Reference
 
