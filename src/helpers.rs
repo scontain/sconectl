@@ -124,6 +124,7 @@ pub fn sanity() -> String {
         ),
     };
     let path = format!("{home}/.docker");
+    let mut map_config = "".to_string();
     if Path::new(&path).exists() {
         let path = format!("{home}/.docker/config.json");
         match fs::read_to_string(path.clone()) {
@@ -148,6 +149,7 @@ pub fn sanity() -> String {
                         }
                     }
                 }
+                map_config = "-v ~/.docker/config.json:/home/non-root/.docker/config.json".to_string();
             }
             Err(_err) => eprintln!(
                 "Warning: Failed to read Docker config file from location {path}. In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 22852-10923-23603)"
@@ -193,5 +195,5 @@ pub fn sanity() -> String {
         }
         Err(_e) => "-v /var/run/docker.sock:/var/run/docker.sock".to_string(),
     };
-    vol
+    format!("{vol} {map_config}")
 }
