@@ -16,7 +16,7 @@ maintenance = { status = "actively-developed" }
 [dependencies]
 colored = "3.0.0"
 which = "7.0.2"
-serde_json = "1.0.81"
+serde_json = "1.0.141"
 shells = "0.2.0"
 spinners = "4.1.0"
 log = "0.4.27"
