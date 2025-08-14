@@ -149,7 +149,8 @@ pub fn sanity() -> String {
                         }
                     }
                 }
-                map_config = "-v ~/.docker/config.json:/home/non-root/.docker/config.json".to_string();
+                map_config =
+                    "-v ~/.docker/config.json:/home/non-root/.docker/config.json".to_string();
             }
             Err(_err) => eprintln!(
                 "Warning: Failed to read Docker config file from location {path}. In case you are using docker, please ensure that field 'credsStore' in 'config.json' is empty. (Warning 22852-10923-23603)"
